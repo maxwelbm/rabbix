@@ -26,10 +26,16 @@ var uiCmd = &cobra.Command{
 	Use:   "ui",
 	Short: "Sobe uma interface web com os testes disponíveis",
 	Run: func(cmd *cobra.Command, args []string) {
-		homeDir, _ := os.UserHomeDir()
-		testDir := filepath.Join(homeDir, ".rabbix", "tests")
 
-		files, err := os.ReadDir(testDir)
+		// Carrega configuração para obter diretório de saída
+		settings := loadSettings()
+		outputDir := settings["output_dir"]
+		if outputDir == "" {
+			home, _ := os.UserHomeDir()
+			outputDir = filepath.Join(home, ".rabbix", "tests")
+		}
+
+		files, err := os.ReadDir(outputDir)
 		if err != nil {
 			fmt.Println("Erro ao listar os testes:", err)
 			return
@@ -40,7 +46,7 @@ var uiCmd = &cobra.Command{
 			if filepath.Ext(file.Name()) != ".json" {
 				continue
 			}
-			data, err := os.ReadFile(filepath.Join(testDir, file.Name()))
+			data, err := os.ReadFile(filepath.Join(outputDir, file.Name()))
 			if err != nil {
 				continue
 			}
@@ -88,7 +94,7 @@ var uiCmd = &cobra.Command{
 			}
 
 			testName := strings.TrimPrefix(r.URL.Path, "/run/")
-			data, err := ioutil.ReadFile(filepath.Join(testDir, testName+".json"))
+			data, err := os.ReadFile(filepath.Join(outputDir, testName+".json"))
 			if err != nil {
 				http.Error(w, "Teste não encontrado", http.StatusNotFound)
 				return
@@ -111,7 +117,24 @@ var uiCmd = &cobra.Command{
 
 			finalBody, _ := json.Marshal(requestBody)
 
-			req, err := http.NewRequest("POST", "http://localhost:15672/api/exchanges/%2f/amq.default/publish", strings.NewReader(string(finalBody)))
+			// Carrega configuração para obter diretório de saída
+			settings := loadSettings()
+			outputDir := settings["output_dir"]
+			if outputDir == "" {
+				home, _ := os.UserHomeDir()
+				outputDir = filepath.Join(home, ".rabbix", "tests")
+			}
+
+			// Se não tiver host definido, usa valor padrão
+			host := settings["host"]
+			if host == "" {
+				host = "http://localhost:15672"
+			}
+
+			// Monta a URL final
+			raptURL := strings.TrimRight(host, "/") + "/api/exchanges/%2f/amq.default/publish"
+
+			req, err := http.NewRequest("POST", raptURL, strings.NewReader(string(finalBody)))
 			if err != nil {
 				http.Error(w, "Erro ao montar requisição", http.StatusInternalServerError)
 				return

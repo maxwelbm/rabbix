@@ -3,7 +3,6 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -14,10 +13,14 @@ var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "Lista todos os casos de teste salvos",
 	Run: func(cmd *cobra.Command, args []string) {
-		homeDir, _ := os.UserHomeDir()
-		testDir := filepath.Join(homeDir, ".rabbix", "tests")
+		settings := loadSettings()
+		outputDir := settings["output_dir"]
+		if outputDir == "" {
+			home, _ := os.UserHomeDir()
+			outputDir = filepath.Join(home, ".rabbix", "tests")
+		}
 
-		files, err := ioutil.ReadDir(testDir)
+		files, err := os.ReadDir(outputDir)
 		if err != nil {
 			fmt.Printf("Erro ao acessar diretório: %v\n", err)
 			return
@@ -27,8 +30,8 @@ var listCmd = &cobra.Command{
 
 		for _, file := range files {
 			if filepath.Ext(file.Name()) == ".json" {
-				path := filepath.Join(testDir, file.Name())
-				data, err := ioutil.ReadFile(path)
+				path := filepath.Join(outputDir, file.Name())
+				data, err := os.ReadFile(path)
 				if err != nil {
 					continue
 				}

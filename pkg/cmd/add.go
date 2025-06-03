@@ -38,10 +38,16 @@ var addCmd = &cobra.Command{
 			return
 		}
 
-		// Cria diretório de testes, se não existir
-		homeDir, _ := os.UserHomeDir()
-		testDir := filepath.Join(homeDir, ".rabbix", "tests")
-		os.MkdirAll(testDir, os.ModePerm)
+		// Carrega configuração para obter diretório de saída
+		settings := loadSettings()
+		outputDir := settings["output_dir"]
+		if outputDir == "" {
+			home, _ := os.UserHomeDir()
+			outputDir = filepath.Join(home, ".rabbix", "tests")
+		}
+
+		// Cria estrutura e salva o arquivo
+		os.MkdirAll(outputDir, os.ModePerm)
 
 		// Cria estrutura de caso de teste
 		testCase := map[string]interface{}{
@@ -51,7 +57,7 @@ var addCmd = &cobra.Command{
 		}
 
 		// Salva no arquivo
-		outPath := filepath.Join(testDir, testName+".json")
+		outPath := filepath.Join(outputDir, testName+".json")
 		outData, _ := json.MarshalIndent(testCase, "", "  ")
 		if err := os.WriteFile(outPath, outData, 0644); err != nil {
 			fmt.Printf("Erro ao salvar caso de teste: %v\\n", err)
