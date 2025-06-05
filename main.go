@@ -1,8 +1,6 @@
 package main
 
-import (
-	"rabbix/pkg/cmd"
-)
+import "github.com/maxwelbm/rabbix/pkg/cmd"
 
 func main() {
 	cmd.Execute()
