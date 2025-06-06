@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -12,6 +13,10 @@ import (
 var (
 	host      string
 	outputDir string
+	user      string
+	password  string
+	zone      string
+	client    string
 )
 
 var configCmd = &cobra.Command{
@@ -34,6 +39,41 @@ var configSetCmd = &cobra.Command{
 			settings["output_dir"] = outputDir
 		}
 
+		if zone != "" {
+			settings["zone"] = zone
+		}
+
+		if client != "" {
+			settings["client"] = client
+		}
+
+		var decodedUser, decodedPassword string
+		
+		if user != "" {
+			decoded, err := base64.StdEncoding.DecodeString(user)
+			if err != nil {
+				fmt.Printf("Erro ao decodificar usuário base64: %v\n", err)
+				return
+			}
+			decodedUser = string(decoded)
+		}
+
+		if password != "" {
+			decoded, err := base64.StdEncoding.DecodeString(password)
+			if err != nil {
+				fmt.Printf("Erro ao decodificar senha base64: %v\n", err)
+				return
+			}
+			decodedPassword = string(decoded)
+		}
+
+		// Se ambos user e password foram fornecidos, cria o auth
+		if decodedUser != "" && decodedPassword != "" {
+			auth := decodedUser + ":" + decodedPassword
+			encodedAuth := base64.StdEncoding.EncodeToString([]byte(auth))
+			settings["auth"] = encodedAuth
+		}
+
 		saveSettings(settings)
 		fmt.Println("✅ Configuração atualizada com sucesso.")
 	},
@@ -54,6 +94,11 @@ var configGetCmd = &cobra.Command{
 func init() {
 	configSetCmd.Flags().StringVar(&host, "host", "", "Host base do RabbitMQ (ex: http://localhost:15672)")
 	configSetCmd.Flags().StringVar(&outputDir, "output", "", "Diretório para salvar os testes")
+	configSetCmd.Flags().StringVar(&user, "user", "", "Usuário do RabbitMQ (codificado em base64)")
+	configSetCmd.Flags().StringVar(&password, "password", "", "Senha do RabbitMQ (codificada em base64)")
+	configSetCmd.Flags().StringVar(&zone, "zone", "", "Zona para requisições")
+	configSetCmd.Flags().StringVar(&client, "client", "", "Cliente para requisições")
+
 	configCmd.AddCommand(configSetCmd)
 	configCmd.AddCommand(configGetCmd)
 	rootCmd.AddCommand(configCmd)
