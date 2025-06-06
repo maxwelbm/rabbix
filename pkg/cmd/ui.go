@@ -140,10 +140,30 @@ var uiCmd = &cobra.Command{
 				return
 			}
 			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Basic Z3Vlc3Q6Z3Vlc3Q=")
 
-			client := &http.Client{}
-			resp, err := client.Do(req)
+			// Verifica se existe auth nas configurações, senão usa padrão
+			auth := settings["auth"]
+			if auth == "" {
+				auth = "Basic Z3Vlc3Q6Z3Vlc3Q="
+			}
+			req.Header.Set("Authorization", auth)
+
+			// Verifica se existe client nas configurações, senão usa padrão
+			client := settings["client"]
+			if client == "" {
+				client = "6b3c9fac-46e7-43ea-ad71-0641ee51e53d"
+			}
+			req.Header.Set("x-ds-client-key", client)
+
+			// Verifica se existe zone nas configurações, senão usa padrão
+			zone := settings["zone"]
+			if zone == "" {
+				zone = "issuer"
+			}
+			req.Header.Set("x-ds-zone", zone)
+
+			clientHttp := &http.Client{}
+			resp, err := clientHttp.Do(req)
 			if err != nil {
 				http.Error(w, "Erro ao enviar requisição", http.StatusBadGateway)
 				return
