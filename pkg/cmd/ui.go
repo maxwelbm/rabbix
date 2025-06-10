@@ -4,16 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"io"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/maxwelbm/rabbix/web"
 )
 
 // PublishMessageConfig contém as configurações para publicar uma mensagem
@@ -115,9 +117,46 @@ type TestCase struct {
 	JSONPool map[string]interface{} `json:"json_pool"`
 }
 
+type BatchExecution struct {
+	ID            string    `json:"id"`
+	Tests         []string  `json:"tests"`
+	Concurrency   int       `json:"concurrency"`
+	Delay         int       `json:"delay"`
+	Status        string    `json:"status"`
+	StartTime     time.Time `json:"start_time"`
+	EndTime       time.Time `json:"end_time"`
+	TotalTests    int       `json:"total_tests"`
+	SuccessCount  int       `json:"success_count"`
+	FailureCount  int       `json:"failure_count"`
+	Results       []TestResult `json:"results"`
+}
+
+type TestResult struct {
+	TestName   string    `json:"test_name"`
+	Status     string    `json:"status"`
+	Duration   int64     `json:"duration_ms"`
+	HTTPStatus int       `json:"http_status"`
+	Response   string    `json:"response"`
+	Error      string    `json:"error"`
+	Timestamp  time.Time `json:"timestamp"`
+}
+
+type LogMessage struct {
+	Level     string    `json:"level"`
+	Message   string    `json:"message"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+var (
+	activeExecutions = make(map[string]*BatchExecution)
+	executionsMutex  = sync.RWMutex{}
+	logClients       = make(map[string]chan LogMessage)
+	logClientsMutex  = sync.RWMutex{}
+)
+
 var uiCmd = &cobra.Command{
 	Use:   "ui",
-	Short: "Sobe uma interface web com os testes disponíveis",
+	Short: "Sobe uma interface web avançada com os testes disponíveis",
 	Run: func(cmd *cobra.Command, args []string) {
 
 		// Carrega configuração para obter diretório de saída
@@ -149,44 +188,63 @@ var uiCmd = &cobra.Command{
 			}
 		}
 
-		// Handlers
+		// Handler para página principal
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			tmpl := template.Must(template.New("index").Parse(`
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-	<meta charset="UTF-8">
-	<title>Rabbix UI</title>
-	<style>
-		body { font-family: sans-serif; background: #111; color: #eee; padding: 2rem; }
-		.test-case { border: 1px solid #444; margin-bottom: 1rem; padding: 1rem; border-radius: 8px; background: #1a1a1a; }
-		button { padding: 0.5rem 1rem; background: #1e90ff; color: white; border: none; border-radius: 5px; cursor: pointer; }
-		button:hover { background: #0078d7; }
-	</style>
-</head>
-<body>
-	<h1>📡 Rabbix - Casos de Teste</h1>
-	{{range .}}
-	<div class="test-case">
-		<h2>{{.Name}}</h2>
-		<p><strong>Queue:</strong> {{.RouteKey}}</p>
-		<form method="POST" action="/run/{{.Name}}">
-			<button type="submit">▶ Executar</button>
-		</form>
-	</div>
-	{{end}}
-</body>
-</html>`))
-			tmpl.Execute(w, tests)
+			tmpl, err := web.GetTemplate("index.html")
+			if err != nil {
+				http.Error(w, "Erro ao carregar template", http.StatusInternalServerError)
+				return
+			}
+			
+			data := struct {
+				Tests []TestCase
+			}{
+				Tests: tests,
+			}
+			
+			if err := tmpl.Execute(w, data); err != nil {
+				http.Error(w, "Erro ao executar template", http.StatusInternalServerError)
+				return
+			}
 		})
 
-		http.HandleFunc("/run/", func(w http.ResponseWriter, r *http.Request) {
+		// Handler para arquivos estáticos
+		http.HandleFunc("/static/", func(w http.ResponseWriter, r *http.Request) {
+			path := strings.TrimPrefix(r.URL.Path, "/static/")
+			fullPath := "static/" + path
+			
+			data, err := web.GetStaticFile(fullPath)
+			if err != nil {
+				http.Error(w, "File not found", http.StatusNotFound)
+				return
+			}
+			
+			// Set content type based on extension
+			if strings.HasSuffix(path, ".css") {
+				w.Header().Set("Content-Type", "text/css; charset=utf-8")
+			} else if strings.HasSuffix(path, ".js") {
+				w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
+			} else {
+				w.Header().Set("Content-Type", "application/octet-stream")
+			}
+			
+			w.Write(data)
+		})
+
+		// API para listar testes
+		http.HandleFunc("/api/tests", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(tests)
+		})
+
+		// API para executar teste individual
+		http.HandleFunc("/api/run/", func(w http.ResponseWriter, r *http.Request) {
 			if r.Method != "POST" {
 				http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
 				return
 			}
 
-			testName := strings.TrimPrefix(r.URL.Path, "/run/")
+			testName := strings.TrimPrefix(r.URL.Path, "/api/run/")
 			data, err := os.ReadFile(filepath.Join(outputDir, testName+".json"))
 			if err != nil {
 				http.Error(w, "Teste não encontrado", http.StatusNotFound)
@@ -199,22 +257,131 @@ var uiCmd = &cobra.Command{
 				return
 			}
 
+			start := time.Now()
 			resp, err := PublishMessage(tc)
+			duration := time.Since(start)
+
+			result := TestResult{
+				TestName:  tc.Name,
+				Duration:  duration.Milliseconds(),
+				Timestamp: time.Now(),
+			}
+
 			if err != nil {
-				http.Error(w, "Erro ao enviar requisição: "+err.Error(), http.StatusBadGateway)
+				result.Status = "error"
+				result.Error = err.Error()
+			} else {
+				defer resp.Body.Close()
+				result.HTTPStatus = resp.StatusCode
+				body, _ := io.ReadAll(resp.Body)
+				result.Response = string(body)
+				
+				if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+					result.Status = "success"
+				} else {
+					result.Status = "failure"
+				}
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(result)
+		})
+
+		// API para executar batch
+		http.HandleFunc("/api/batch", func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != "POST" {
+				http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
 				return
 			}
-			defer resp.Body.Close()
 
-			body, _ := io.ReadAll(resp.Body)
+			var request struct {
+				Tests       []string `json:"tests"`
+				Concurrency int      `json:"concurrency"`
+				Delay       int      `json:"delay"`
+			}
+
+			if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+				http.Error(w, "JSON inválido", http.StatusBadRequest)
+				return
+			}
+
+			// Cria execução
+			execution := &BatchExecution{
+				ID:          generateID(),
+				Tests:       request.Tests,
+				Concurrency: request.Concurrency,
+				Delay:       request.Delay,
+				Status:      "running",
+				StartTime:   time.Now(),
+				TotalTests:  len(request.Tests),
+				Results:     make([]TestResult, 0),
+			}
+
+			executionsMutex.Lock()
+			activeExecutions[execution.ID] = execution
+			executionsMutex.Unlock()
+
+			// Executa em background
+			go executeBatchAsync(execution, outputDir, tests)
+
 			w.Header().Set("Content-Type", "application/json")
-			w.Write(body)
+			json.NewEncoder(w).Encode(map[string]string{"execution_id": execution.ID})
+		})
+
+		// API para status da execução
+		http.HandleFunc("/api/execution/", func(w http.ResponseWriter, r *http.Request) {
+			executionID := strings.TrimPrefix(r.URL.Path, "/api/execution/")
+			
+			executionsMutex.RLock()
+			execution, exists := activeExecutions[executionID]
+			executionsMutex.RUnlock()
+
+			if !exists {
+				http.Error(w, "Execução não encontrada", http.StatusNotFound)
+				return
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(execution)
+		})
+
+		// Server-Sent Events para logs em tempo real
+		http.HandleFunc("/api/logs/", func(w http.ResponseWriter, r *http.Request) {
+			executionID := strings.TrimPrefix(r.URL.Path, "/api/logs/")
+			
+			w.Header().Set("Content-Type", "text/event-stream")
+			w.Header().Set("Cache-Control", "no-cache")
+			w.Header().Set("Connection", "keep-alive")
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+
+			clientChan := make(chan LogMessage, 100)
+			logClientsMutex.Lock()
+			logClients[executionID] = clientChan
+			logClientsMutex.Unlock()
+
+			defer func() {
+				logClientsMutex.Lock()
+				delete(logClients, executionID)
+				logClientsMutex.Unlock()
+				close(clientChan)
+			}()
+
+			for {
+				select {
+				case msg := <-clientChan:
+					data, _ := json.Marshal(msg)
+					fmt.Fprintf(w, "data: %s\n\n", data)
+					w.(http.Flusher).Flush()
+				case <-r.Context().Done():
+					return
+				}
+			}
 		})
 
 		// Inicia servidor
 		server := &http.Server{Addr: ":7777"}
 		go func() {
-			fmt.Println("🌐 Rabbix UI rodando em http://localhost:7777 (Ctrl+C para sair)")
+			fmt.Println("🌐 Rabbix UI Avançada rodando em http://localhost:7777 (Ctrl+C para sair)")
 			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				fmt.Println("Erro no servidor:", err)
 			}
@@ -231,6 +398,119 @@ var uiCmd = &cobra.Command{
 			fmt.Println("Erro ao encerrar:", err)
 		}
 	},
+}
+
+func executeBatchAsync(execution *BatchExecution, outputDir string, allTests []TestCase) {
+	defer func() {
+		execution.EndTime = time.Now()
+		execution.Status = "completed"
+	}()
+
+	// Canal para controlar concorrência
+	semaphore := make(chan struct{}, execution.Concurrency)
+	var wg sync.WaitGroup
+	var resultsMutex sync.Mutex
+
+	sendLog := func(level, message string) {
+		logMsg := LogMessage{
+			Level:     level,
+			Message:   message,
+			Timestamp: time.Now(),
+		}
+		
+		logClientsMutex.RLock()
+		if client, exists := logClients[execution.ID]; exists {
+			select {
+			case client <- logMsg:
+			default:
+			}
+		}
+		logClientsMutex.RUnlock()
+	}
+
+	sendLog("info", fmt.Sprintf("Iniciando execução em lote de %d testes", len(execution.Tests)))
+	sendLog("info", fmt.Sprintf("Configurações: Concorrência=%d, Delay=%dms", execution.Concurrency, execution.Delay))
+
+	for i, testName := range execution.Tests {
+		wg.Add(1)
+		go func(index int, name string) {
+			defer wg.Done()
+			
+			// Controla concorrência
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+
+			// Aplica delay
+			if index > 0 && execution.Delay > 0 {
+				time.Sleep(time.Duration(execution.Delay) * time.Millisecond)
+			}
+
+			sendLog("info", fmt.Sprintf("[%d/%d] Executando: %s", index+1, len(execution.Tests), name))
+
+			// Encontra o caso de teste
+			var testCase *TestCase
+			for _, tc := range allTests {
+				if tc.Name == name {
+					testCase = &tc
+					break
+				}
+			}
+
+			result := TestResult{
+				TestName:  name,
+				Timestamp: time.Now(),
+			}
+
+			if testCase == nil {
+				result.Status = "error"
+				result.Error = "Teste não encontrado"
+				sendLog("error", fmt.Sprintf("[%d/%d] %s: Teste não encontrado", index+1, len(execution.Tests), name))
+			} else {
+				start := time.Now()
+				resp, err := PublishMessage(*testCase)
+				result.Duration = time.Since(start).Milliseconds()
+
+				if err != nil {
+					result.Status = "error"
+					result.Error = err.Error()
+					sendLog("error", fmt.Sprintf("[%d/%d] %s: ERRO - %s", index+1, len(execution.Tests), name, err.Error()))
+				} else {
+					defer resp.Body.Close()
+					result.HTTPStatus = resp.StatusCode
+					body, _ := io.ReadAll(resp.Body)
+					result.Response = string(body)
+
+					if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+						result.Status = "success"
+						sendLog("success", fmt.Sprintf("[%d/%d] %s: OK (Status: %d, %dms)", index+1, len(execution.Tests), name, resp.StatusCode, result.Duration))
+					} else {
+						result.Status = "failure"
+						sendLog("warning", fmt.Sprintf("[%d/%d] %s: Status %d (%dms)", index+1, len(execution.Tests), name, resp.StatusCode, result.Duration))
+					}
+				}
+			}
+
+			// Adiciona resultado thread-safe
+			resultsMutex.Lock()
+			execution.Results = append(execution.Results, result)
+			if result.Status == "success" {
+				execution.SuccessCount++
+			} else {
+				execution.FailureCount++
+			}
+			resultsMutex.Unlock()
+
+		}(i, testName)
+	}
+
+	wg.Wait()
+	
+	sendLog("info", fmt.Sprintf("Execução concluída! Sucessos: %d, Falhas: %d, Total: %d", 
+		execution.SuccessCount, execution.FailureCount, execution.TotalTests))
+}
+
+func generateID() string {
+	return fmt.Sprintf("%d", time.Now().UnixNano())
 }
 
 func init() {

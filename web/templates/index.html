@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Rabbix UI Avançada</title>
+	<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+	<div class="container">
+		<header class="header">
+			<h1>📡 Rabbix - Interface Avançada</h1>
+			<div class="stats">
+				<div class="stat">
+					<span class="stat-number" id="total-tests">{{len .Tests}}</span>
+					<span class="stat-label">Testes Disponíveis</span>
+				</div>
+				<div class="stat">
+					<span class="stat-number" id="active-executions">0</span>
+					<span class="stat-label">Execuções Ativas</span>
+				</div>
+			</div>
+		</header>
+
+		<div class="main-content">
+			<div class="sidebar">
+				<div class="section">
+					<h3>🧪 Casos de Teste</h3>
+					<div class="execution-order">
+						<span class="execution-order-label">Ordem de execução:</span>
+						<span class="execution-counter" id="selected-count">0</span>
+						<button class="reset-order" onclick="resetExecutionOrder()">Resetar</button>
+					</div>
+					<div class="test-list" id="test-list">
+						{{range .Tests}}
+						<div class="test-item" data-test="{{.Name}}" draggable="true" ondragstart="handleDragStart(event)" ondragover="handleDragOver(event)" ondrop="handleDrop(event)" ondragend="handleDragEnd(event)">
+							<div class="drag-handle"></div>
+							<div class="test-header">
+								<input type="checkbox" class="test-checkbox" value="{{.Name}}" onchange="updateExecutionOrder()">
+								<span class="test-name">{{.Name}}</span>
+								<button class="btn-small btn-run" onclick="runSingleTest('{{.Name}}')">▶</button>
+							</div>
+							<div class="test-details">
+								<span class="route-key">{{.RouteKey}}</span>
+							</div>
+						</div>
+						{{end}}
+					</div>
+				</div>
+
+				<div class="section">
+					<h3>⚙️ Configurações de Lote</h3>
+					<div class="batch-config">
+						<div class="form-group">
+							<label>Concorrência:</label>
+							<input type="number" id="concurrency" value="3" min="1" max="20">
+						</div>
+						<div class="form-group">
+							<label>Delay (ms):</label>
+							<input type="number" id="delay" value="500" min="0" max="5000" step="100">
+						</div>
+						<div class="form-actions">
+							<button class="btn btn-primary" onclick="selectAllTests()">Selecionar Todos</button>
+							<button class="btn btn-secondary" onclick="clearSelection()">Limpar</button>
+							<button class="btn btn-success" onclick="executeBatch()">🚀 Executar Lote</button>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="main-panel">
+				<div class="execution-area">
+					<div class="tabs">
+						<button class="tab active" onclick="showTab('logs')">📋 Logs</button>
+						<button class="tab" onclick="showTab('results')">📊 Resultados</button>
+						<button class="tab" onclick="showTab('charts')">📈 Gráficos</button>
+					</div>
+
+					<div class="tab-content">
+						<div id="logs-tab" class="tab-panel active">
+							<div class="logs-header">
+								<h4>Logs de Execução</h4>
+								<button class="btn-small" onclick="clearLogs()">Limpar</button>
+							</div>
+							<div id="logs-container" class="logs-container">
+								<div class="log-placeholder">
+									<p>👋 Selecione testes e clique em "Executar Lote" para ver os logs em tempo real</p>
+								</div>
+							</div>
+						</div>
+
+						<div id="results-tab" class="tab-panel">
+							<div class="results-header">
+								<h4>Resultados Detalhados</h4>
+								<div class="results-summary" id="results-summary"></div>
+							</div>
+							<div id="results-container" class="results-container">
+								<div class="results-placeholder">
+									<p>📊 Os resultados aparecerão aqui após a execução</p>
+								</div>
+							</div>
+						</div>
+
+						<div id="charts-tab" class="tab-panel">
+							<div class="charts-container">
+								<div class="chart-card">
+									<h5>Status dos Testes</h5>
+									<canvas id="status-chart" width="300" height="300"></canvas>
+								</div>
+								<div class="chart-card">
+									<h5>Tempo de Resposta</h5>
+									<canvas id="timing-chart" width="400" height="200"></canvas>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script src="/static/js/script.js"></script>
+</body>
+</html>
