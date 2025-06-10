@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,6 +15,99 @@ import (
 
 	"github.com/spf13/cobra"
 )
+
+// PublishMessageConfig contém as configurações para publicar uma mensagem
+type PublishMessageConfig struct {
+	Host       string
+	Auth       string
+	ClientKey  string
+	Zone       string
+	Exchange   string
+}
+
+// PublishMessage envia uma mensagem para o RabbitMQ usando a API HTTP
+func PublishMessage(testCase TestCase) (*http.Response, error) {
+	return PublishMessageWithConfig(testCase, nil)
+}
+
+// PublishMessageWithConfig envia uma mensagem para o RabbitMQ com configurações customizadas
+func PublishMessageWithConfig(testCase TestCase, config *PublishMessageConfig) (*http.Response, error) {
+	settings := loadSettings()
+	
+	// Usa configurações passadas ou carrega das configurações salvas
+	var cfg PublishMessageConfig
+	if config != nil {
+		cfg = *config
+	}
+	
+	// Aplica valores padrão se não estiverem definidos
+	if cfg.Host == "" {
+		cfg.Host = settings["host"]
+		if cfg.Host == "" {
+			cfg.Host = "http://localhost:15672"
+		}
+	}
+	
+	if cfg.Auth == "" {
+		cfg.Auth = settings["auth"]
+		if cfg.Auth == "" {
+			cfg.Auth = "Basic Z3Vlc3Q6Z3Vlc3Q="
+		}
+	}
+	
+	if cfg.ClientKey == "" {
+		cfg.ClientKey = settings["client"]
+		if cfg.ClientKey == "" {
+			cfg.ClientKey = "6b3c9fac-46e7-43ea-ad71-0641ee51e53d"
+		}
+	}
+	
+	if cfg.Zone == "" {
+		cfg.Zone = settings["zone"]
+		if cfg.Zone == "" {
+			cfg.Zone = "issuer"
+		}
+	}
+	
+	if cfg.Exchange == "" {
+		cfg.Exchange = "amq.default"
+	}
+	
+	// Serializa o payload
+	payloadBytes, err := json.Marshal(testCase.JSONPool)
+	if err != nil {
+		return nil, fmt.Errorf("erro ao serializar payload: %w", err)
+	}
+
+	requestBody := map[string]interface{}{
+		"properties":       map[string]interface{}{},
+		"routing_key":      testCase.RouteKey,
+		"payload":          string(payloadBytes),
+		"payload_encoding": "string",
+	}
+
+	finalBody, err := json.Marshal(requestBody)
+	if err != nil {
+		return nil, fmt.Errorf("erro ao serializar request body: %w", err)
+	}
+
+	// Monta a URL final
+	raptURL := strings.TrimRight(cfg.Host, "/") + "/api/exchanges/%2f/" + cfg.Exchange + "/publish"
+
+	req, err := http.NewRequest("POST", raptURL, strings.NewReader(string(finalBody)))
+	if err != nil {
+		return nil, fmt.Errorf("erro ao criar requisição HTTP: %w", err)
+	}
+	
+	// Configura headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", cfg.Auth)
+	req.Header.Set("x-ds-client-key", cfg.ClientKey)
+	req.Header.Set("x-ds-zone", cfg.Zone)
+
+	clientHttp := &http.Client{}
+	return clientHttp.Do(req)
+}
 
 type TestCase struct {
 	Name     string                 `json:"name"`
@@ -106,71 +199,14 @@ var uiCmd = &cobra.Command{
 				return
 			}
 
-			payloadBytes, _ := json.Marshal(tc.JSONPool)
-
-			requestBody := map[string]interface{}{
-				"properties":       map[string]interface{}{},
-				"routing_key":      tc.RouteKey,
-				"payload":          string(payloadBytes),
-				"payload_encoding": "string",
-			}
-
-			finalBody, _ := json.Marshal(requestBody)
-
-			// Carrega configuração para obter diretório de saída
-			settings := loadSettings()
-			outputDir := settings["output_dir"]
-			if outputDir == "" {
-				home, _ := os.UserHomeDir()
-				outputDir = filepath.Join(home, ".rabbix", "tests")
-			}
-
-			// Se não tiver host definido, usa valor padrão
-			host := settings["host"]
-			if host == "" {
-				host = "http://localhost:15672"
-			}
-
-			// Monta a URL final
-			raptURL := strings.TrimRight(host, "/") + "/api/exchanges/%2f/amq.default/publish"
-
-			req, err := http.NewRequest("POST", raptURL, strings.NewReader(string(finalBody)))
+			resp, err := PublishMessage(tc)
 			if err != nil {
-				http.Error(w, "Erro ao montar requisição", http.StatusInternalServerError)
-				return
-			}
-			req.Header.Set("Content-Type", "application/json")
-
-			// Verifica se existe auth nas configurações, senão usa padrão
-			auth := settings["auth"]
-			if auth == "" {
-				auth = "Basic Z3Vlc3Q6Z3Vlc3Q="
-			}
-			req.Header.Set("Authorization", auth)
-
-			// Verifica se existe client nas configurações, senão usa padrão
-			client := settings["client"]
-			if client == "" {
-				client = "6b3c9fac-46e7-43ea-ad71-0641ee51e53d"
-			}
-			req.Header.Set("x-ds-client-key", client)
-
-			// Verifica se existe zone nas configurações, senão usa padrão
-			zone := settings["zone"]
-			if zone == "" {
-				zone = "issuer"
-			}
-			req.Header.Set("x-ds-zone", zone)
-
-			clientHttp := &http.Client{}
-			resp, err := clientHttp.Do(req)
-			if err != nil {
-				http.Error(w, "Erro ao enviar requisição", http.StatusBadGateway)
+				http.Error(w, "Erro ao enviar requisição: "+err.Error(), http.StatusBadGateway)
 				return
 			}
 			defer resp.Body.Close()
 
-			body, _ := ioutil.ReadAll(resp.Body)
+			body, _ := io.ReadAll(resp.Body)
 			w.Header().Set("Content-Type", "application/json")
 			w.Write(body)
 		})
