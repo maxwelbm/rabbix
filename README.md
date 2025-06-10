@@ -9,6 +9,30 @@
 - Substituir o uso do Postman com uma interface mais simples e rápida.
 - Facilitar a documentação e reexecução de mensagens usadas em ambientes de integração.
 
+## 📁 Estrutura do Projeto
+
+```
+rabbix/
+├── main.go                 # Ponto de entrada da aplicação
+├── pkg/cmd/               # Comandos da CLI
+│   ├── root.go           # Comando raiz
+│   ├── add.go            # Adicionar testes
+│   ├── list.go           # Listar testes
+│   ├── run.go            # Executar teste individual
+│   ├── batch.go          # Executar testes em lote
+│   ├── config.go         # Configurações
+│   └── ui.go             # Interface web avançada
+└── web/                  # Assets da interface web
+    ├── embed.go          # Sistema de embed
+    ├── templates/        # Templates HTML
+    │   └── index.html    # Interface principal
+    └── static/           # Arquivos estáticos
+        ├── css/
+        │   └── style.css # Estilos da interface
+        └── js/
+            └── script.js # JavaScript da interface
+```
+
 ## ⚙️ Instalação
 
 Você pode instalar diretamente com:
