@@ -48,23 +48,27 @@ var configSetCmd = &cobra.Command{
 		}
 
 		var decodedUser, decodedPassword string
-		
+
 		if user != "" {
+			// Tenta decodificar como base64, se falhar usa como texto puro
 			decoded, err := base64.StdEncoding.DecodeString(user)
 			if err != nil {
-				fmt.Printf("Erro ao decodificar usuário base64: %v\n", err)
-				return
+				// Se não for base64 válido, usa o valor como texto puro
+				decodedUser = user
+			} else {
+				decodedUser = string(decoded)
 			}
-			decodedUser = string(decoded)
 		}
 
 		if password != "" {
+			// Tenta decodificar como base64, se falhar usa como texto puro
 			decoded, err := base64.StdEncoding.DecodeString(password)
 			if err != nil {
-				fmt.Printf("Erro ao decodificar senha base64: %v\n", err)
-				return
+				// Se não for base64 válido, usa o valor como texto puro
+				decodedPassword = password
+			} else {
+				decodedPassword = string(decoded)
 			}
-			decodedPassword = string(decoded)
 		}
 
 		// Se ambos user e password foram fornecidos, cria o auth
@@ -94,8 +98,8 @@ var configGetCmd = &cobra.Command{
 func init() {
 	configSetCmd.Flags().StringVar(&host, "host", "", "Host base do RabbitMQ (ex: http://localhost:15672)")
 	configSetCmd.Flags().StringVar(&outputDir, "output", "", "Diretório para salvar os testes")
-	configSetCmd.Flags().StringVar(&user, "user", "", "Usuário do RabbitMQ (codificado em base64)")
-	configSetCmd.Flags().StringVar(&password, "password", "", "Senha do RabbitMQ (codificada em base64)")
+	configSetCmd.Flags().StringVar(&user, "user", "", "Usuário do RabbitMQ (texto puro ou base64)")
+	configSetCmd.Flags().StringVar(&password, "password", "", "Senha do RabbitMQ (texto puro ou base64)")
 	configSetCmd.Flags().StringVar(&zone, "zone", "", "Zona para requisições")
 	configSetCmd.Flags().StringVar(&client, "client", "", "Cliente para requisições")
 
