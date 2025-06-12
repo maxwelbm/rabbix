@@ -8,6 +8,6 @@
     "num_cycles": 12,
     "zone": "issuer"
   },
-  "name": "onbording",
+  "name": "onboarding",
   "route_key": "invoice-cycle-onboarding-queue"
 }
