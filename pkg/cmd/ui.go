@@ -14,75 +14,51 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/spf13/cobra"
 	"github.com/maxwelbm/rabbix/web"
+	"github.com/spf13/cobra"
 )
 
 // PublishMessageConfig contém as configurações para publicar uma mensagem
 type PublishMessageConfig struct {
-	Host       string
-	Auth       string
-	ClientKey  string
-	Zone       string
-	Exchange   string
+	Host      string
+	Auth      string
+	ClientKey string
+	Zone      string
+	Exchange  string
 }
 
 // PublishMessage envia uma mensagem para o RabbitMQ usando a API HTTP
 func PublishMessage(testCase TestCase) (*http.Response, error) {
-	return PublishMessageWithConfig(testCase, nil)
-}
-
-// PublishMessageWithConfig envia uma mensagem para o RabbitMQ com configurações customizadas
-func PublishMessageWithConfig(testCase TestCase, config *PublishMessageConfig) (*http.Response, error) {
 	settings := loadSettings()
-	
-	// Usa configurações passadas ou carrega das configurações salvas
-	var cfg PublishMessageConfig
-	if config != nil {
-		cfg = *config
+
+	var auth string = "Basic Z3Vlc3Q6Z3Vlc3Q="
+	if settings["auth"] != "" {
+		auth = "Basic " + settings["auth"]
 	}
-	
-	// Aplica valores padrão se não estiverem definidos
-	if cfg.Host == "" {
-		cfg.Host = settings["host"]
-		if cfg.Host == "" {
-			cfg.Host = "http://localhost:15672"
-		}
+
+	var host string = "http://localhost:15672"
+	if settings["host"] != "" {
+		host = settings["host"]
 	}
-	
-	if cfg.Auth == "" {
-		cfg.Auth = settings["auth"]
-		if cfg.Auth == "" {
-			cfg.Auth = "Basic Z3Vlc3Q6Z3Vlc3Q="
-		}
+
+	clientKey := "6b3c9fac-46e7-43ea-ad71-0641ee51e53d"
+	if settings["client"] != "" {
+		clientKey = settings["client"]
 	}
-	
-	if cfg.ClientKey == "" {
-		cfg.ClientKey = settings["client"]
-		if cfg.ClientKey == "" {
-			cfg.ClientKey = "6b3c9fac-46e7-43ea-ad71-0641ee51e53d"
-		}
+
+	zone := "issuer"
+	if settings["zone"] != "" {
+		zone = settings["zone"]
 	}
-	
-	if cfg.Zone == "" {
-		cfg.Zone = settings["zone"]
-		if cfg.Zone == "" {
-			cfg.Zone = "issuer"
-		}
-	}
-	
-	if cfg.Exchange == "" {
-		cfg.Exchange = "amq.default"
-	}
-	
+
 	// Serializa o payload
 	payloadBytes, err := json.Marshal(testCase.JSONPool)
 	if err != nil {
 		return nil, fmt.Errorf("erro ao serializar payload: %w", err)
 	}
 
-	requestBody := map[string]interface{}{
-		"properties":       map[string]interface{}{},
+	requestBody := map[string]any{
+		"properties":       map[string]any{},
 		"routing_key":      testCase.RouteKey,
 		"payload":          string(payloadBytes),
 		"payload_encoding": "string",
@@ -94,41 +70,41 @@ func PublishMessageWithConfig(testCase TestCase, config *PublishMessageConfig) (
 	}
 
 	// Monta a URL final
-	raptURL := strings.TrimRight(cfg.Host, "/") + "/api/exchanges/%2f/" + cfg.Exchange + "/publish"
+	raptURL := strings.TrimRight(host, "/") + "/api/exchanges/%2f/amq.default/publish"
 
 	req, err := http.NewRequest("POST", raptURL, strings.NewReader(string(finalBody)))
 	if err != nil {
 		return nil, fmt.Errorf("erro ao criar requisição HTTP: %w", err)
 	}
-	
+
 	// Configura headers
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", cfg.Auth)
-	req.Header.Set("x-ds-client-key", cfg.ClientKey)
-	req.Header.Set("x-ds-zone", cfg.Zone)
+	req.Header.Set("Authorization", auth)
+	req.Header.Set("x-ds-client-key", clientKey)
+	req.Header.Set("x-ds-zone", zone)
 
 	clientHttp := &http.Client{}
 	return clientHttp.Do(req)
 }
 
 type TestCase struct {
-	Name     string                 `json:"name"`
-	RouteKey string                 `json:"route_key"`
-	JSONPool map[string]interface{} `json:"json_pool"`
+	Name     string         `json:"name"`
+	RouteKey string         `json:"route_key"`
+	JSONPool map[string]any `json:"json_pool"`
 }
 
 type BatchExecution struct {
-	ID            string    `json:"id"`
-	Tests         []string  `json:"tests"`
-	Concurrency   int       `json:"concurrency"`
-	Delay         int       `json:"delay"`
-	Status        string    `json:"status"`
-	StartTime     time.Time `json:"start_time"`
-	EndTime       time.Time `json:"end_time"`
-	TotalTests    int       `json:"total_tests"`
-	SuccessCount  int       `json:"success_count"`
-	FailureCount  int       `json:"failure_count"`
-	Results       []TestResult `json:"results"`
+	ID           string       `json:"id"`
+	Tests        []string     `json:"tests"`
+	Concurrency  int          `json:"concurrency"`
+	Delay        int          `json:"delay"`
+	Status       string       `json:"status"`
+	StartTime    time.Time    `json:"start_time"`
+	EndTime      time.Time    `json:"end_time"`
+	TotalTests   int          `json:"total_tests"`
+	SuccessCount int          `json:"success_count"`
+	FailureCount int          `json:"failure_count"`
+	Results      []TestResult `json:"results"`
 }
 
 type TestResult struct {
@@ -195,13 +171,13 @@ var uiCmd = &cobra.Command{
 				http.Error(w, "Erro ao carregar template", http.StatusInternalServerError)
 				return
 			}
-			
+
 			data := struct {
 				Tests []TestCase
 			}{
 				Tests: tests,
 			}
-			
+
 			if err := tmpl.Execute(w, data); err != nil {
 				http.Error(w, "Erro ao executar template", http.StatusInternalServerError)
 				return
@@ -212,13 +188,18 @@ var uiCmd = &cobra.Command{
 		http.HandleFunc("/static/", func(w http.ResponseWriter, r *http.Request) {
 			path := strings.TrimPrefix(r.URL.Path, "/static/")
 			fullPath := "static/" + path
-			
+
 			data, err := web.GetStaticFile(fullPath)
 			if err != nil {
 				http.Error(w, "File not found", http.StatusNotFound)
 				return
 			}
-			
+			type LogMessage struct {
+				Level     string    `json:"level"`
+				Message   string    `json:"message"`
+				Timestamp time.Time `json:"timestamp"`
+			}
+
 			// Set content type based on extension
 			if strings.HasSuffix(path, ".css") {
 				w.Header().Set("Content-Type", "text/css; charset=utf-8")
@@ -227,7 +208,7 @@ var uiCmd = &cobra.Command{
 			} else {
 				w.Header().Set("Content-Type", "application/octet-stream")
 			}
-			
+
 			w.Write(data)
 		})
 
@@ -275,7 +256,7 @@ var uiCmd = &cobra.Command{
 				result.HTTPStatus = resp.StatusCode
 				body, _ := io.ReadAll(resp.Body)
 				result.Response = string(body)
-				
+
 				if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 					result.Status = "success"
 				} else {
@@ -331,7 +312,7 @@ var uiCmd = &cobra.Command{
 		// API para status da execução
 		http.HandleFunc("/api/execution/", func(w http.ResponseWriter, r *http.Request) {
 			executionID := strings.TrimPrefix(r.URL.Path, "/api/execution/")
-			
+
 			executionsMutex.RLock()
 			execution, exists := activeExecutions[executionID]
 			executionsMutex.RUnlock()
@@ -348,7 +329,7 @@ var uiCmd = &cobra.Command{
 		// Server-Sent Events para logs em tempo real
 		http.HandleFunc("/api/logs/", func(w http.ResponseWriter, r *http.Request) {
 			executionID := strings.TrimPrefix(r.URL.Path, "/api/logs/")
-			
+
 			w.Header().Set("Content-Type", "text/event-stream")
 			w.Header().Set("Cache-Control", "no-cache")
 			w.Header().Set("Connection", "keep-alive")
@@ -417,7 +398,7 @@ func executeBatchAsync(execution *BatchExecution, outputDir string, allTests []T
 			Message:   message,
 			Timestamp: time.Now(),
 		}
-		
+
 		logClientsMutex.RLock()
 		if client, exists := logClients[execution.ID]; exists {
 			select {
@@ -435,7 +416,7 @@ func executeBatchAsync(execution *BatchExecution, outputDir string, allTests []T
 		wg.Add(1)
 		go func(index int, name string) {
 			defer wg.Done()
-			
+
 			// Controla concorrência
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
@@ -504,8 +485,8 @@ func executeBatchAsync(execution *BatchExecution, outputDir string, allTests []T
 	}
 
 	wg.Wait()
-	
-	sendLog("info", fmt.Sprintf("Execução concluída! Sucessos: %d, Falhas: %d, Total: %d", 
+
+	sendLog("info", fmt.Sprintf("Execução concluída! Sucessos: %d, Falhas: %d, Total: %d",
 		execution.SuccessCount, execution.FailureCount, execution.TotalTests))
 }
 

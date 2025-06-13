@@ -47,35 +47,13 @@ var configSetCmd = &cobra.Command{
 			settings["client"] = client
 		}
 
-		var decodedUser, decodedPassword string
-
-		if user != "" {
-			// Tenta decodificar como base64, se falhar usa como texto puro
-			decoded, err := base64.StdEncoding.DecodeString(user)
-			if err != nil {
-				// Se não for base64 válido, usa o valor como texto puro
-				decodedUser = user
-			} else {
-				decodedUser = string(decoded)
-			}
-		}
-
-		if password != "" {
-			// Tenta decodificar como base64, se falhar usa como texto puro
-			decoded, err := base64.StdEncoding.DecodeString(password)
-			if err != nil {
-				// Se não for base64 válido, usa o valor como texto puro
-				decodedPassword = password
-			} else {
-				decodedPassword = string(decoded)
-			}
-		}
-
 		// Se ambos user e password foram fornecidos, cria o auth
-		if decodedUser != "" && decodedPassword != "" {
-			auth := decodedUser + ":" + decodedPassword
-			encodedAuth := base64.StdEncoding.EncodeToString([]byte(auth))
-			settings["auth"] = encodedAuth
+		if user != "" && password != "" {
+			auth := user + ":" + password
+			auth = base64.StdEncoding.EncodeToString([]byte(auth))
+			fmt.Println("auth: ", auth)
+
+			settings["auth"] = string(auth)
 		}
 
 		saveSettings(settings)
