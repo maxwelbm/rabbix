@@ -1,0 +1,9 @@
+{
+  "json_pool": {
+    "client_key": "6b3c9fac-46e7-43ea-ad71-0641ee51e53d",
+    "zone": "issuer",
+    "cycles_count": 12
+  },
+  "name": "91-next-revolving2",
+  "route_key": "invoice-revolving-credit"
+}

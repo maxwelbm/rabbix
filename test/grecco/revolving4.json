@@ -1,0 +1,17 @@
+{
+  "json_pool": {
+    "clientkey": "9b5f1c3e-72a8-4d6b-a1f4-3e8c9d2b7f5a",
+    "zone": "issuer",
+    "cardId": 40000011,
+    "credit_limit": 5000.0,
+    "available_credit": 4924.5,
+    "used_credit": 75.5,
+    "minimum_payment": 25.0,
+    "interest_rate": 2.5,
+    "revolving_date": "2024-09-20T00:00:00-03:00",
+    "billing_currency_id": 986,
+    "c_card_uu": "f851e7c4-d3b2-4a98-b6e5-7f9a1c2d8e4b"
+  },
+  "name": "revolving4",
+  "route_key": "invoice-revolving-credit"
+}

@@ -1,0 +1,22 @@
+{
+  "json_pool": {
+    "clientkey": "6b3c9fac-46e7-43ea-ad71-0641ee51e53d",
+    "zone": "issuer",
+    "cardId": 40000009,
+    "transactionModel": 1001,
+    "cid": "cid01",
+    "transactionDate": "2024-08-09T00:00:00-03:00",
+    "conciliationDate": "2024-08-10T00:00:00-03:00",
+    "transactionAmount": 19.9,
+    "billing_currency_id": 986,
+    "authorization_currency_id": 986,
+    "SettlementName": "produto 01",
+    "installmentTotal": 1,
+    "installmentNumber": 1,
+    "chargePercent": 0,
+    "feePercent": 0,
+    "totalAmount": 19.9
+  },
+  "name": "2-1-transaction",
+  "route_key": "transaction-statement-queue"
+}

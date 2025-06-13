@@ -1,0 +1,12 @@
+{
+  "json_pool": {
+    "clientkey": "7a4d8e2f-58b3-41fa-b892-1752ff64f84e",
+    "zone": "issuer",
+    "due_date": "2024-09-15",
+    "payment_date": "2024-09-10",
+    "c_card_uu": "d648a2b9-c7e5-4f3a-8d92-45c8b3f7e621",
+    "payment_amount": 45.0
+  },
+  "name": "payment2",
+  "route_key": "transaction-payment-queue"
+}

@@ -1,0 +1,13 @@
+{
+  "json_pool": {
+    "card_uuid": "c529f1f8-f98d-492a-94e2-35faf23bab5b",
+    "cut_day": 1,
+    "due_day": 10,
+    "num_cycles": 12,
+    "at": "2024-05-23",
+    "client_key": "6b3c9fac-46e7-43ea-ad71-0641ee51e53d",
+    "zone": "issuer"
+  },
+  "name": "onbording",
+  "route_key": "invoice-cycle-onboarding-queue"
+}

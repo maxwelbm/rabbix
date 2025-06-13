@@ -1,0 +1,22 @@
+{
+  "json_pool": {
+    "clientkey": "2c8a6f1d-9e4b-43c7-8f2a-6d5b9c1e7a3f",
+    "zone": "issuer",
+    "cardId": 40000012,
+    "transactionModel": 1001,
+    "cid": "marchioli02",
+    "transactionDate": "2024-09-01T00:00:00-03:00",
+    "conciliationDate": "2024-09-02T00:00:00-03:00",
+    "transactionAmount": 89.9,
+    "billing_currency_id": 986,
+    "authorization_currency_id": 986,
+    "SettlementName": "pharmacy_marchioli",
+    "installmentTotal": 1,
+    "installmentNumber": 1,
+    "chargePercent": 0,
+    "feePercent": 0,
+    "totalAmount": 89.9
+  },
+  "name": "transaction2_next",
+  "route_key": "transaction-statement-queue"
+}

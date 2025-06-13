@@ -1,0 +1,22 @@
+{
+  "json_pool": {
+    "clientkey": "2c8a6f1d-9e4b-43c7-8f2a-6d5b9c1e7a3f",
+    "zone": "issuer",
+    "cardId": 40000012,
+    "transactionModel": 1001,
+    "cid": "marchioli01",
+    "transactionDate": "2024-08-25T00:00:00-03:00",
+    "conciliationDate": "2024-08-26T00:00:00-03:00",
+    "transactionAmount": 120.75,
+    "billing_currency_id": 986,
+    "authorization_currency_id": 986,
+    "SettlementName": "store_marchioli",
+    "installmentTotal": 6,
+    "installmentNumber": 1,
+    "chargePercent": 0,
+    "feePercent": 0,
+    "totalAmount": 120.75
+  },
+  "name": "transaction1",
+  "route_key": "transaction-statement-queue"
+}

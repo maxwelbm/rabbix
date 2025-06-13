@@ -1,0 +1,22 @@
+{
+  "json_pool": {
+    "clientkey": "7a4d8e2f-58b3-41fa-b892-1752ff64f84e",
+    "zone": "issuer",
+    "cardId": 40000010,
+    "transactionModel": 1001,
+    "cid": "aline01",
+    "transactionDate": "2024-08-15T00:00:00-03:00",
+    "conciliationDate": "2024-08-16T00:00:00-03:00",
+    "transactionAmount": 45.0,
+    "billing_currency_id": 986,
+    "authorization_currency_id": 986,
+    "SettlementName": "cafe_aline",
+    "installmentTotal": 1,
+    "installmentNumber": 1,
+    "chargePercent": 0,
+    "feePercent": 0,
+    "totalAmount": 45.0
+  },
+  "name": "transaction1",
+  "route_key": "transaction-statement-queue"
+}

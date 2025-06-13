@@ -1,0 +1,18 @@
+curl --request POST \
+  --url https://api-issuer.hml.asapcard.io/graphql \
+  --header 'Content-Type: application/json' \
+  --header 'X-Ds-Zone: garden' \
+  --header 'x-cid: 365ffe56-dc5d-439b-928e-39a8c205f6a3' \
+  --header 'x-ds-client-key: 6b3c9fac-46e7-43ea-ad71-0641ee51e53d' \
+  --data '{
+  "query": "query ListCyclesByPartner($request: FindCyclesRequest!) {\nListCyclesByPartner(request: $request) {\nuuid\nendBalance\nsum\nisClosed\ndueDate\ndailyLines {\nday\nlines {\nestablishment\nvalue\namount\ndate\ninstallments\ninstallmentsNumber\ntransactionTypeDescription\n}\n}\n}\n}",
+  "operationName": "ListCyclesByPartner",
+  "variables": {
+    "request": {
+      "partnerUUID": "ba9cf97a-8fa9-455b-8872-c5bad97fe0e1",
+      "accountUUID": "2b16b9e8-f90d-495b-873c-de1e2c506c9e",
+      "date": "2025/07",
+      "limit": 10
+    }
+  }
+}'
