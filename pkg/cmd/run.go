@@ -16,9 +16,18 @@ var runCmd = &cobra.Command{
 	Long: `Executa um caso de teste específico salvamento previamente.
 Exemplo: rabbix run meu-teste`,
 	Args: cobra.ExactArgs(1),
+	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		// Sincroniza cache antes de fornecer sugestões
+		syncCacheWithFileSystem()
+
+		// Obtém lista de testes do cache
+		cachedTests := getCachedTests()
+
+		return cachedTests, cobra.ShellCompDirectiveNoFileComp
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		testName := args[0]
-		
+
 		// Carrega configuração para obter diretório de saída
 		settings := loadSettings()
 		outputDir := settings["output_dir"]

@@ -25,6 +25,30 @@ Exemplos:
   rabbix batch teste1 teste2 teste3
   rabbix batch --concurrency 5 --delay 1000 teste1 teste2
   rabbix batch --all  # executa todos os testes disponíveis`,
+	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		// Sincroniza cache antes de fornecer sugestões
+		syncCacheWithFileSystem()
+
+		// Obtém lista de testes do cache
+		cachedTests := getCachedTests()
+
+		// Filtra testes que já foram especificados
+		var suggestions []string
+		for _, test := range cachedTests {
+			alreadyUsed := false
+			for _, arg := range args {
+				if arg == test {
+					alreadyUsed = true
+					break
+				}
+			}
+			if !alreadyUsed {
+				suggestions = append(suggestions, test)
+			}
+		}
+
+		return suggestions, cobra.ShellCompDirectiveNoFileComp
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		settings := loadSettings()
 		outputDir := settings["output_dir"]
@@ -34,7 +58,7 @@ Exemplos:
 		}
 
 		var testNames []string
-		
+
 		// Se --all foi especificado, carrega todos os testes
 		if all, _ := cmd.Flags().GetBool("all"); all {
 			files, err := os.ReadDir(outputDir)
@@ -42,7 +66,7 @@ Exemplos:
 				fmt.Printf("❌ Erro ao listar testes: %v\n", err)
 				return
 			}
-			
+
 			for _, file := range files {
 				if filepath.Ext(file.Name()) == ".json" {
 					name := file.Name()[:len(file.Name())-5] // remove .json
@@ -87,11 +111,11 @@ Exemplos:
 
 		// Executa os testes com controle de concorrência
 		results := executeBatch(testCases, batchConcurrency, time.Duration(batchDelay)*time.Millisecond)
-		
+
 		// Exibe resumo final
 		fmt.Println("─────────────────────────────────────")
 		fmt.Printf("📊 Resumo da execução:\n")
-		
+
 		success := 0
 		failed := 0
 		for _, result := range results {
@@ -101,11 +125,11 @@ Exemplos:
 				failed++
 			}
 		}
-		
+
 		fmt.Printf("✅ Sucessos: %d\n", success)
 		fmt.Printf("❌ Falhas: %d\n", failed)
 		fmt.Printf("⏱️  Tempo total: %v\n", calculateTotalTime(results))
-		
+
 		if failed > 0 {
 			fmt.Println("\n🔍 Detalhes das falhas:")
 			for _, result := range results {
@@ -118,50 +142,50 @@ Exemplos:
 }
 
 type BatchResult struct {
-	TestName  string
-	Success   bool
-	Error     string
-	Duration  time.Duration
-	Status    int
-	Response  string
+	TestName string
+	Success  bool
+	Error    string
+	Duration time.Duration
+	Status   int
+	Response string
 }
 
 func executeBatch(testCases []TestCase, concurrency int, delay time.Duration) []BatchResult {
 	var results []BatchResult
 	var mutex sync.Mutex
 	var wg sync.WaitGroup
-	
+
 	// Canal para controlar concorrência
 	semaphore := make(chan struct{}, concurrency)
-	
+
 	startTime := time.Now()
-	
+
 	for i, tc := range testCases {
 		wg.Add(1)
 		go func(index int, testCase TestCase) {
 			defer wg.Done()
-			
+
 			// Adquire semáforo para controlar concorrência
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
-			
+
 			// Aplica delay se não for o primeiro teste
 			if index > 0 && delay > 0 {
 				time.Sleep(delay)
 			}
-			
+
 			// Executa o teste usando a função reutilizável
 			testStart := time.Now()
 			result := BatchResult{
 				TestName: testCase.Name,
 				Duration: 0,
 			}
-			
+
 			fmt.Printf("🔄 [%d/%d] Executando: %s\n", index+1, len(testCases), testCase.Name)
-			
+
 			resp, err := PublishMessage(testCase)
 			result.Duration = time.Since(testStart)
-			
+
 			if err != nil {
 				result.Success = false
 				result.Error = err.Error()
@@ -169,35 +193,35 @@ func executeBatch(testCases []TestCase, concurrency int, delay time.Duration) []
 			} else {
 				defer resp.Body.Close()
 				result.Status = resp.StatusCode
-				
+
 				body, _ := io.ReadAll(resp.Body)
 				result.Response = string(body)
-				
+
 				if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 					result.Success = true
-					fmt.Printf("✅ [%d/%d] %s: OK (Status: %d, %v)\n", 
+					fmt.Printf("✅ [%d/%d] %s: OK (Status: %d, %v)\n",
 						index+1, len(testCases), testCase.Name, resp.StatusCode, result.Duration)
 				} else {
 					result.Success = false
 					result.Error = fmt.Sprintf("Status HTTP %d", resp.StatusCode)
-					fmt.Printf("⚠️  [%d/%d] %s: Status %d (%v)\n", 
+					fmt.Printf("⚠️  [%d/%d] %s: Status %d (%v)\n",
 						index+1, len(testCases), testCase.Name, resp.StatusCode, result.Duration)
 				}
 			}
-			
+
 			// Thread-safe append
 			mutex.Lock()
 			results = append(results, result)
 			mutex.Unlock()
-			
+
 		}(i, tc)
 	}
-	
+
 	wg.Wait()
-	
+
 	totalTime := time.Since(startTime)
 	fmt.Printf("⏱️  Execução concluída em %v\n", totalTime)
-	
+
 	return results
 }
 
@@ -211,12 +235,15 @@ func calculateTotalTime(results []BatchResult) time.Duration {
 
 func init() {
 	rootCmd.AddCommand(batchCmd)
-	
+
 	// Flags para controlar a execução em lote
-	batchCmd.Flags().IntVarP(&batchConcurrency, "concurrency", "c", 3, 
+	batchCmd.Flags().IntVarP(&batchConcurrency, "concurrency", "c", 3,
 		"Número máximo de testes executados simultaneamente")
-	batchCmd.Flags().IntVarP(&batchDelay, "delay", "d", 500, 
+	batchCmd.Flags().IntVarP(&batchDelay, "delay", "d", 500,
 		"Delay em milissegundos entre execuções (0 = sem delay)")
-	batchCmd.Flags().BoolP("all", "a", false, 
+	batchCmd.Flags().BoolP("all", "a", false,
 		"Executa todos os testes disponíveis")
+
+	// Habilita autocomplete para argumentos posicionais
+	batchCmd.MarkFlagRequired("") // Permite argumentos opcionais
 }

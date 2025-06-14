@@ -58,6 +58,11 @@ var configSetCmd = &cobra.Command{
 
 		saveSettings(settings)
 		fmt.Println("✅ Configuração atualizada com sucesso.")
+
+		// Sincroniza cache após mudança de configuração
+		fmt.Println("🔄 Sincronizando cache...")
+		syncCacheWithFileSystem()
+		fmt.Println("✅ Cache sincronizado com sucesso.")
 	},
 }
 
@@ -73,6 +78,37 @@ var configGetCmd = &cobra.Command{
 	},
 }
 
+var configCacheCmd = &cobra.Command{
+	Use:   "cache",
+	Short: "Gerencia o cache de autocomplete",
+}
+
+var configCacheStatsCmd = &cobra.Command{
+	Use:   "stats",
+	Short: "Exibe estatísticas do cache",
+	Run: func(cmd *cobra.Command, args []string) {
+		printCacheStats()
+	},
+}
+
+var configCacheSyncCmd = &cobra.Command{
+	Use:   "sync",
+	Short: "Sincroniza o cache com os arquivos de teste",
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("🔄 Sincronizando cache...")
+		syncCacheWithFileSystem()
+		fmt.Println("✅ Cache sincronizado com sucesso.")
+	},
+}
+
+var configCacheClearCmd = &cobra.Command{
+	Use:   "clear",
+	Short: "Limpa o cache de autocomplete",
+	Run: func(cmd *cobra.Command, args []string) {
+		clearCache()
+	},
+}
+
 func init() {
 	configSetCmd.Flags().StringVar(&host, "host", "", "Host base do RabbitMQ (ex: http://localhost:15672)")
 	configSetCmd.Flags().StringVar(&outputDir, "output", "", "Diretório para salvar os testes")
@@ -83,6 +119,12 @@ func init() {
 
 	configCmd.AddCommand(configSetCmd)
 	configCmd.AddCommand(configGetCmd)
+	configCmd.AddCommand(configCacheCmd)
+
+	configCacheCmd.AddCommand(configCacheStatsCmd)
+	configCacheCmd.AddCommand(configCacheSyncCmd)
+	configCacheCmd.AddCommand(configCacheClearCmd)
+
 	rootCmd.AddCommand(configCmd)
 }
 

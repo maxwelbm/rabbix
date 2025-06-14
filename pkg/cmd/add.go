@@ -27,14 +27,14 @@ var addCmd = &cobra.Command{
 		// Lê o arquivo JSON de entrada
 		data, err := os.ReadFile(inputFile)
 		if err != nil {
-			fmt.Printf("Erro ao ler o arquivo: %v\\n", err)
+			fmt.Printf("Erro ao ler o arquivo: %v\n", err)
 			return
 		}
 
 		// Verifica se é JSON válido
 		var temp interface{}
 		if err := json.Unmarshal(data, &temp); err != nil {
-			fmt.Printf("JSON inválido: %v\\n", err)
+			fmt.Printf("JSON inválido: %v\n", err)
 			return
 		}
 
@@ -60,11 +60,14 @@ var addCmd = &cobra.Command{
 		outPath := filepath.Join(outputDir, testName+".json")
 		outData, _ := json.MarshalIndent(testCase, "", "  ")
 		if err := os.WriteFile(outPath, outData, 0644); err != nil {
-			fmt.Printf("Erro ao salvar caso de teste: %v\\n", err)
+			fmt.Printf("Erro ao salvar caso de teste: %v\n", err)
 			return
 		}
 
-		fmt.Printf("✅ Caso de teste \"%s\" salvo com sucesso em %s\\n", testName, outPath)
+		fmt.Printf("✅ Caso de teste \"%s\" salvo com sucesso em %s\n", testName, outPath)
+
+		// Adiciona ao cache para autocomplete
+		addToCache(testName, routeKey)
 	},
 }
 
