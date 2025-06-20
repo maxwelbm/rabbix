@@ -1,0 +1,28 @@
+version: "2"
+
+run:
+  timeout: 5m
+  skip-dirs:
+    - .zed
+    - .git
+    - node_modules
+    - vendor
+
+linters:
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
+  default: none
+  enable:
+    - wsl # Ensures there is a space before inline comments (//), following Go style.
+    - nilerr # Detects useless 'return nil, nil' patterns and other invalid nil error returns.
+    - staticcheck # Enforces Go idiomatic conventions (naming, comments, etc.).
+    - errcheck # Checks if the code is formatted according to `gofmt`.
+    - govet # Detects common mistakes not caught by the compiler (e.g., Printf format issues).
+    - gocritic # Provides extra checks for non-idiomatic patterns, redundancy, etc.
+    - lll # Warns about long lines (customizable max length, default: 120).
+formatters:
+  enable:
+    - gofmt

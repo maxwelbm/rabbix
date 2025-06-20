@@ -32,7 +32,7 @@ var addCmd = &cobra.Command{
 		}
 
 		// Verifica se é JSON válido
-		var temp interface{}
+		var temp any
 		if err := json.Unmarshal(data, &temp); err != nil {
 			fmt.Printf("JSON inválido: %v\n", err)
 			return
@@ -47,10 +47,13 @@ var addCmd = &cobra.Command{
 		}
 
 		// Cria estrutura e salva o arquivo
-		os.MkdirAll(outputDir, os.ModePerm)
+		if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
+			fmt.Printf("Erro ao criar diretório de saída: %v\n", err)
+			return
+		}
 
 		// Cria estrutura de caso de teste
-		testCase := map[string]interface{}{
+		testCase := map[string]any{
 			"name":      testName,
 			"route_key": routeKey,
 			"json_pool": temp,

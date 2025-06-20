@@ -1,9 +1,0 @@
-{
-  "json_pool": {
-    "moment": "2025-02-02",
-    "client_key": "6b3c9fac-46e7-43ea-ad71-0641ee51e53d",
-    "zone": "issuer"
-  },
-  "name": "996-close-cycle",
-  "route_key": "transaction-statement-queue"
-}

@@ -1,0 +1,14 @@
+// Project-local debug tasks
+//
+// For more documentation on how to configure debug tasks,
+// see: https://zed.dev/docs/debugger
+[
+  {
+    "label": "Debug rabbix",
+    "adapter": "Delve",
+    "request": "launch",
+    "mode": "debug",
+    "program": "./main.go",
+    "env": {}
+  }
+]

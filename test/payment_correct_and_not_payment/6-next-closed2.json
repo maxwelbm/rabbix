@@ -1,9 +1,0 @@
-{
-  "json_pool": {
-    "moment": "2024-09-02",
-    "client_key": "6b3c9fac-46e7-43ea-ad71-0641ee51e53d",
-    "zone": "issuer"
-  },
-  "name": "6-next-closed2",
-  "route_key": "invoice-cycle-close-check"
-}

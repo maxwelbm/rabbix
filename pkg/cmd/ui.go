@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -31,12 +32,12 @@ type PublishMessageConfig struct {
 func PublishMessage(testCase TestCase) (*http.Response, error) {
 	settings := loadSettings()
 
-	var auth string = "Basic Z3Vlc3Q6Z3Vlc3Q="
+	var auth = "Basic Z3Vlc3Q6Z3Vlc3Q="
 	if settings["auth"] != "" {
 		auth = "Basic " + settings["auth"]
 	}
 
-	var host string = "http://localhost:15672"
+	var host = "http://localhost:15672"
 	if settings["host"] != "" {
 		host = settings["host"]
 	}
@@ -194,11 +195,6 @@ var uiCmd = &cobra.Command{
 				http.Error(w, "File not found", http.StatusNotFound)
 				return
 			}
-			type LogMessage struct {
-				Level     string    `json:"level"`
-				Message   string    `json:"message"`
-				Timestamp time.Time `json:"timestamp"`
-			}
 
 			// Set content type based on extension
 			if strings.HasSuffix(path, ".css") {
@@ -209,13 +205,19 @@ var uiCmd = &cobra.Command{
 				w.Header().Set("Content-Type", "application/octet-stream")
 			}
 
-			w.Write(data)
+			if _, err := w.Write(data); err != nil {
+				http.Error(w, "Erro ao escrever resposta", http.StatusInternalServerError)
+				return
+			}
 		})
 
 		// API para listar testes
 		http.HandleFunc("/api/tests", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(tests)
+			if err := json.NewEncoder(w).Encode(tests); err != nil {
+				http.Error(w, "Erro ao escrever resposta", http.StatusInternalServerError)
+				return
+			}
 		})
 
 		// API para executar teste individual
@@ -252,7 +254,11 @@ var uiCmd = &cobra.Command{
 				result.Status = "error"
 				result.Error = err.Error()
 			} else {
-				defer resp.Body.Close()
+				defer func() {
+					if closeErr := resp.Body.Close(); closeErr != nil {
+						log.Printf("Error closing response body: %v", closeErr)
+					}
+				}()
 				result.HTTPStatus = resp.StatusCode
 				body, _ := io.ReadAll(resp.Body)
 				result.Response = string(body)
@@ -265,7 +271,9 @@ var uiCmd = &cobra.Command{
 			}
 
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(result)
+			if err := json.NewEncoder(w).Encode(result); err != nil {
+				http.Error(w, "Erro ao escrever resposta", http.StatusInternalServerError)
+			}
 		})
 
 		// API para executar batch
@@ -303,10 +311,12 @@ var uiCmd = &cobra.Command{
 			executionsMutex.Unlock()
 
 			// Executa em background
-			go executeBatchAsync(execution, outputDir, tests)
+			go executeBatchAsync(execution, tests)
 
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]string{"execution_id": execution.ID})
+			if err := json.NewEncoder(w).Encode(map[string]string{"execution_id": execution.ID}); err != nil {
+				http.Error(w, "Erro ao escrever resposta", http.StatusInternalServerError)
+			}
 		})
 
 		// API para status da execução
@@ -323,7 +333,9 @@ var uiCmd = &cobra.Command{
 			}
 
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(execution)
+			if err := json.NewEncoder(w).Encode(execution); err != nil {
+				http.Error(w, "Erro ao escrever resposta", http.StatusInternalServerError)
+			}
 		})
 
 		// Server-Sent Events para logs em tempo real
@@ -351,7 +363,10 @@ var uiCmd = &cobra.Command{
 				select {
 				case msg := <-clientChan:
 					data, _ := json.Marshal(msg)
-					fmt.Fprintf(w, "data: %s\n\n", data)
+					if _, err := fmt.Fprintf(w, "data: %s\n\n", data); err != nil {
+						http.Error(w, "Erro ao escrever resposta", http.StatusInternalServerError)
+						return
+					}
 					w.(http.Flusher).Flush()
 				case <-r.Context().Done():
 					return
@@ -381,7 +396,7 @@ var uiCmd = &cobra.Command{
 	},
 }
 
-func executeBatchAsync(execution *BatchExecution, outputDir string, allTests []TestCase) {
+func executeBatchAsync(execution *BatchExecution, allTests []TestCase) {
 	defer func() {
 		execution.EndTime = time.Now()
 		execution.Status = "completed"
@@ -456,7 +471,11 @@ func executeBatchAsync(execution *BatchExecution, outputDir string, allTests []T
 					result.Error = err.Error()
 					sendLog("error", fmt.Sprintf("[%d/%d] %s: ERRO - %s", index+1, len(execution.Tests), name, err.Error()))
 				} else {
-					defer resp.Body.Close()
+					defer func() {
+						if closeErr := resp.Body.Close(); closeErr != nil {
+							log.Printf("Error closing response body: %v", closeErr)
+						}
+					}()
 					result.HTTPStatus = resp.StatusCode
 					body, _ := io.ReadAll(resp.Body)
 					result.Response = string(body)

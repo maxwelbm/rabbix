@@ -17,12 +17,12 @@ var healthCmd = &cobra.Command{
 		// Carrega configurações
 		settings := loadSettings()
 
-		var auth string = "Basic Z3Vlc3Q6Z3Vlc3Q="
+		var auth = "Basic Z3Vlc3Q6Z3Vlc3Q="
 		if settings["auth"] != "" {
 			auth = "Basic " + settings["auth"]
 		}
 
-		var host string = "http://localhost:15672"
+		var host = "http://localhost:15672"
 		if settings["host"] != "" {
 			host = settings["host"]
 		}
@@ -50,7 +50,11 @@ var healthCmd = &cobra.Command{
 			fmt.Printf("❌ Erro ao fazer requisição: %v\n", err)
 			return
 		}
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				fmt.Printf("❌ Erro ao fechar corpo da resposta: %v\n", err)
+			}
+		}()
 
 		// Lê a resposta
 		body, err := io.ReadAll(resp.Body)

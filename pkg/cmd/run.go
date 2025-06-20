@@ -60,7 +60,11 @@ Exemplo: rabbix run meu-teste`,
 			fmt.Printf("❌ Erro ao enviar mensagem: %v\n", err)
 			return
 		}
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				fmt.Printf("❌ Erro ao fechar corpo da resposta: %v\n", err)
+			}
+		}()
 
 		// Lê a resposta
 		body, err := io.ReadAll(resp.Body)

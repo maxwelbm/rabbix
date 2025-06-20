@@ -61,7 +61,9 @@ func addToCache(name, routeKey string) {
 			// Atualiza entrada existente
 			cache.Tests[i].RouteKey = routeKey
 			cache.Tests[i].UpdatedAt = time.Now()
-			saveCache(cache)
+			if err := saveCache(cache); err != nil {
+				fmt.Printf("Erro ao salvar cache: %v\n", err)
+			}
 			return
 		}
 	}
@@ -75,21 +77,25 @@ func addToCache(name, routeKey string) {
 	}
 
 	cache.Tests = append(cache.Tests, entry)
-	saveCache(cache)
-}
-
-func removeFromCache(name string) {
-	cache := loadCache()
-
-	for i, entry := range cache.Tests {
-		if entry.Name == name {
-			// Remove entrada
-			cache.Tests = append(cache.Tests[:i], cache.Tests[i+1:]...)
-			saveCache(cache)
-			return
-		}
+	if err := saveCache(cache); err != nil {
+		fmt.Printf("Erro ao salvar cache: %v\n", err)
 	}
 }
+
+// func removeFromCache(name string) {
+// 	cache := loadCache()
+
+// 	for i, entry := range cache.Tests {
+// 		if entry.Name == name {
+// 			// Remove entrada
+// 			cache.Tests = append(cache.Tests[:i], cache.Tests[i+1:]...)
+// 			if err := saveCache(cache); err != nil {
+// 				fmt.Printf("Erro ao salvar cache: %v\n", err)
+// 			}
+// 			return
+// 		}
+// 	}
+// }
 
 func getCachedTests() []string {
 	cache := loadCache()
@@ -102,10 +108,10 @@ func getCachedTests() []string {
 	return tests
 }
 
-func getCachedTestsWithRouteKey() []CacheEntry {
-	cache := loadCache()
-	return cache.Tests
-}
+// func getCachedTestsWithRouteKey() []CacheEntry {
+// 	cache := loadCache()
+// 	return cache.Tests
+// }
 
 func syncCacheWithFileSystem() {
 	settings := loadSettings()
@@ -163,7 +169,9 @@ func syncCacheWithFileSystem() {
 
 	// Atualiza cache
 	cache.Tests = newTests
-	saveCache(cache)
+	if err := saveCache(cache); err != nil {
+		fmt.Printf("❌ Erro ao salvar cache: %v\n", err)
+	}
 }
 
 func printCacheStats() {

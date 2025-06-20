@@ -20,20 +20,22 @@ func GetTemplate(name string) (*template.Template, error) {
 // GetStaticHandler returns an HTTP handler for static assets
 func GetStaticHandler() http.Handler {
 	// Debug: List embedded files
-	fs.WalkDir(Assets, ".", func(path string, d fs.DirEntry, err error) error {
+	if err := fs.WalkDir(Assets, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		log.Printf("Embedded file: %s", path)
 		return nil
-	})
+	}); err != nil {
+		log.Printf("Error walking embedded assets: %v", err)
+	}
 
 	staticFS, err := fs.Sub(Assets, "static")
 	if err != nil {
 		log.Printf("Error creating sub filesystem: %v", err)
 		panic(err)
 	}
-	
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Static request: %s", r.URL.Path)
 		http.FileServer(http.FS(staticFS)).ServeHTTP(w, r)
@@ -48,7 +50,7 @@ func GetStaticFile(path string) ([]byte, error) {
 // DebugAssets prints all embedded assets
 func DebugAssets() {
 	fmt.Println("=== Embedded Assets ===")
-	fs.WalkDir(Assets, ".", func(path string, d fs.DirEntry, err error) error {
+	if err := fs.WalkDir(Assets, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -56,6 +58,8 @@ func DebugAssets() {
 			fmt.Printf("File: %s\n", path)
 		}
 		return nil
-	})
+	}); err != nil {
+		fmt.Printf("Error walking embedded assets: %v\n", err)
+	}
 	fmt.Println("=====================")
 }

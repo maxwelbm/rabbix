@@ -191,7 +191,13 @@ func executeBatch(testCases []TestCase, concurrency int, delay time.Duration) []
 				result.Error = err.Error()
 				fmt.Printf("❌ [%d/%d] %s: FALHOU (%v)\n", index+1, len(testCases), testCase.Name, err)
 			} else {
-				defer resp.Body.Close()
+				defer func() {
+					err := resp.Body.Close()
+					if err != nil {
+						fmt.Printf("Erro ao fechar resposta: %v\n", err)
+					}
+				}()
+
 				result.Status = resp.StatusCode
 
 				body, _ := io.ReadAll(resp.Body)
@@ -245,5 +251,7 @@ func init() {
 		"Executa todos os testes disponíveis")
 
 	// Habilita autocomplete para argumentos posicionais
-	batchCmd.MarkFlagRequired("") // Permite argumentos opcionais
+	if err := batchCmd.MarkFlagRequired(""); err != nil { // Permite argumentos opcionais
+		fmt.Printf("Erro ao marcar flag como obrigatória: %v\n", err)
+	}
 }
