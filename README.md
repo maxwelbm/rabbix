@@ -1,39 +1,12 @@
 # 🐇 rabbix
 
-**rabbix** é uma CLI para facilitar os testes de micro-serviços que utilizam RabbitMQ, tornando o processo de criação, execução e documentação de mensagens mais simples e padronizado.
+This project was born out of a real need during development: to test multiple services, RabbitMQ queues and APIs with different payloads, in a quick and organized way. At first, this was a manual, repetitive and error-prone process - I would lose payloads, restart pages and spend too much time on simple tasks.
 
-## 🎯 Objetivo
+To solve this, I started with a simple script to publish messages in RabbitMQ. This script evolved into a lean CLI, which initially focused only on queues, and now I'm expanding it to also allow REST requests. The focus is to offer a tool that helps developers test manual flows in an organized, reusable and efficient way during development time.
 
-- Permitir o envio de mensagens RabbitMQ diretamente pela linha de comando.
-- Salvar e reutilizar casos de teste com JSON dinâmico.
-- Substituir o uso do Postman com uma interface mais simples e rápida.
-- Facilitar a documentação e reexecução de mensagens usadas em ambientes de integração.
+More than a tool, this has become a serious project - made by a developer, for developers. I'm building it with attention, care and a focus on productivity. It's something that has helped me a lot on a daily basis, and I believe it can help others too.
 
-## 📁 Estrutura do Projeto
-
-```
-rabbix/
-├── main.go                 # Ponto de entrada da aplicação
-├── pkg/cmd/               # Comandos da CLI
-│   ├── root.go           # Comando raiz
-│   ├── add.go            # Adicionar testes
-│   ├── list.go           # Listar testes
-│   ├── run.go            # Executar teste individual
-│   ├── batch.go          # Executar testes em lote
-│   ├── config.go         # Configurações
-│   └── ui.go             # Interface web avançada
-└── web/                  # Assets da interface web
-    ├── embed.go          # Sistema de embed
-    ├── templates/        # Templates HTML
-    │   └── index.html    # Interface principal
-    └── static/           # Arquivos estáticos
-        ├── css/
-        │   └── style.css # Estilos da interface
-        └── js/
-            └── script.js # JavaScript da interface
-```
-
-## ⚙️ Instalação
+## ⚙️ Install
 
 Você pode instalar diretamente com:
 

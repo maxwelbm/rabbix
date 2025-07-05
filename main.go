@@ -1,7 +1,7 @@
 package main
 
-import "github.com/maxwelbm/rabbix/pkg/cmd"
+import "github.com/maxwelbm/rabbix/internal/plataform"
 
 func main() {
-	cmd.Execute()
+	plataform.Execute()
 }

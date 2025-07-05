@@ -249,9 +249,4 @@ func init() {
 		"Delay em milissegundos entre execuções (0 = sem delay)")
 	batchCmd.Flags().BoolP("all", "a", false,
 		"Executa todos os testes disponíveis")
-
-	// Habilita autocomplete para argumentos posicionais
-	if err := batchCmd.MarkFlagRequired(""); err != nil { // Permite argumentos opcionais
-		fmt.Printf("Erro ao marcar flag como obrigatória: %v\n", err)
-	}
 }
