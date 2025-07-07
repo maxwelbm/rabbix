@@ -7,8 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/maxwelbm/rabbix/pkg/sett"
 )
 
 func getCachePath() string {
@@ -16,9 +14,9 @@ func getCachePath() string {
 	return filepath.Join(home, ".rabbix", "cache.json")
 }
 
-func loadCache() *Cache {
+func loadCache() *CacheStr {
 	path := getCachePath()
-	cache := &Cache{
+	cache := &CacheStr{
 		Tests:   []CacheEntry{},
 		Version: "1.0",
 	}
@@ -30,7 +28,7 @@ func loadCache() *Cache {
 	return cache
 }
 
-func saveCache(cache *Cache) error {
+func saveCache(cache *CacheStr) error {
 	path := getCachePath()
 	_ = os.MkdirAll(filepath.Dir(path), os.ModePerm)
 
@@ -72,7 +70,7 @@ func addToCache(name, routeKey string) {
 	}
 }
 
-func GetCachedTests() []string {
+func (c *Cache) GetCachedTests() []string {
 	cache := loadCache()
 	var tests []string
 
@@ -83,8 +81,8 @@ func GetCachedTests() []string {
 	return tests
 }
 
-func SyncCacheWithFileSystem() {
-	settings := sett.LoadSettings()
+func (c *Cache) SyncCacheWithFileSystem() {
+	settings := c.settings.LoadSettings()
 	outputDir := settings["output_dir"]
 	if outputDir == "" {
 		home, _ := os.UserHomeDir()
@@ -145,7 +143,7 @@ func SyncCacheWithFileSystem() {
 }
 
 func clearCache() {
-	cache := &Cache{
+	cache := &CacheStr{
 		Tests:   []CacheEntry{},
 		Version: "1.0",
 	}

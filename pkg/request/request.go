@@ -7,12 +7,27 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/maxwelbm/rabbix/pkg/rabbix"
 	"github.com/maxwelbm/rabbix/pkg/sett"
 )
 
+type Request struct {
+	settings sett.SettItf
+}
+
+type RequestItf interface {
+	Request(testCase rabbix.TestCase) (*http.Response, error)
+}
+
+func New(settings sett.SettItf) RequestItf {
+	return &Request{
+		settings: settings,
+	}
+}
+
 // PublishMessage envia uma mensagem para o RabbitMQ usando a API HTTP
-func PublishMessage(testCase TestCase) (*http.Response, error) {
-	settings := sett.LoadSettings()
+func (r *Request) Request(testCase rabbix.TestCase) (*http.Response, error) {
+	settings := r.settings.LoadSettings()
 
 	var auth = "Basic Z3Vlc3Q6Z3Vlc3Q="
 	if settings["auth"] != "" {
@@ -66,10 +81,4 @@ func PublishMessage(testCase TestCase) (*http.Response, error) {
 
 	clientHttp := &http.Client{}
 	return clientHttp.Do(req)
-}
-
-type TestCase struct {
-	Name     string         `json:"name"`
-	RouteKey string         `json:"route_key"`
-	JSONPool map[string]any `json:"json_pool"`
 }

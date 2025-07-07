@@ -9,7 +9,7 @@ type CacheEntry struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-type Cache struct {
+type CacheStr struct {
 	Tests   []CacheEntry `json:"tests"`
 	Version string       `json:"version"`
 }

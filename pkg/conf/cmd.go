@@ -1,6 +1,7 @@
 package conf
 
 import (
+	"github.com/maxwelbm/rabbix/pkg/sett"
 	"github.com/spf13/cobra"
 )
 
@@ -11,12 +12,24 @@ var (
 	password  string
 )
 
-var ConfCmd = &cobra.Command{
-	Use:   "conf",
-	Short: "Define ou exibe configurações padrão da CLI",
+type Conf struct {
+	settings sett.SettItf
 }
 
-func init() {
-	ConfCmd.AddCommand(set)
-	ConfCmd.AddCommand(get)
+func New(settings sett.SettItf) *Conf {
+	return &Conf{
+		settings: settings,
+	}
+}
+
+func (c *Conf) CmdConf() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "conf",
+		Short: "Define ou exibe configurações padrão da CLI",
+	}
+
+	cmd.AddCommand(c.CmdSet())
+	cmd.AddCommand(c.CmdGet())
+
+	return cmd
 }
