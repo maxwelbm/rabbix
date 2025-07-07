@@ -1,4 +1,4 @@
-package cmd
+package health
 
 import (
 	"fmt"
@@ -6,16 +6,16 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/maxwelbm/rabbix/pkg/sett"
 	"github.com/spf13/cobra"
 )
 
-var healthCmd = &cobra.Command{
+var HealthCmd = &cobra.Command{
 	Use:   "health",
 	Short: "Verifica o status de saúde da API do RabbitMQ",
 	Long:  `Faz uma requisição para o endpoint /api/overview para verificar se a API do RabbitMQ está funcionando corretamente.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// Carrega configurações
-		settings := loadSettings()
+		settings := sett.LoadSettings()
 
 		var auth = "Basic Z3Vlc3Q6Z3Vlc3Q="
 		if settings["auth"] != "" {
@@ -74,8 +74,4 @@ var healthCmd = &cobra.Command{
 
 		fmt.Printf("📄 Resposta:\n%s\n", string(body))
 	},
-}
-
-func init() {
-	rootCmd.AddCommand(healthCmd)
 }

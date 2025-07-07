@@ -1,4 +1,4 @@
-package cmd
+package request
 
 import (
 	"bytes"
@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/maxwelbm/rabbix/pkg/sett"
 )
 
 // PublishMessage envia uma mensagem para o RabbitMQ usando a API HTTP
 func PublishMessage(testCase TestCase) (*http.Response, error) {
-	settings := loadSettings()
+	settings := sett.LoadSettings()
 
 	var auth = "Basic Z3Vlc3Q6Z3Vlc3Q="
 	if settings["auth"] != "" {

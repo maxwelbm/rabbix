@@ -4,8 +4,12 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/maxwelbm/rabbix/pkg/batch"
+	"github.com/maxwelbm/rabbix/pkg/cache"
 	"github.com/maxwelbm/rabbix/pkg/conf"
 	"github.com/maxwelbm/rabbix/pkg/health"
+	"github.com/maxwelbm/rabbix/pkg/list"
+	"github.com/maxwelbm/rabbix/pkg/run"
 	"github.com/spf13/cobra"
 )
 
@@ -27,6 +31,10 @@ func Execute() {
 }
 
 func init() {
-	root.AddCommand(conf.Conf)
-	root.AddCommand(health.Health)
+	root.AddCommand(conf.ConfCmd)
+	root.AddCommand(health.HealthCmd)
+	root.AddCommand(cache.CacheCmd)
+	root.AddCommand(batch.BatchCmd)
+	root.AddCommand(list.ListCmd)
+	root.AddCommand(run.RunCmd)
 }

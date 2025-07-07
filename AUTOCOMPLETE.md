@@ -96,7 +96,7 @@ Após configurar o autocomplete, você pode usar:
 rabbix batch [TAB][TAB]          # Lista todos os testes disponíveis
 rabbix batch teste1 [TAB][TAB]   # Lista testes restantes (excluindo já selecionados)
 
-# Autocomplete para comando run  
+# Autocomplete para comando run
 rabbix run [TAB][TAB]            # Lista todos os testes disponíveis
 ```
 

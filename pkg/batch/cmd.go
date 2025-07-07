@@ -1,4 +1,4 @@
-package cmd
+package batch
 
 import (
 	"encoding/json"
@@ -9,6 +9,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/maxwelbm/rabbix/pkg/cache"
+	"github.com/maxwelbm/rabbix/pkg/request"
+	"github.com/maxwelbm/rabbix/pkg/sett"
 	"github.com/spf13/cobra"
 )
 
@@ -17,7 +20,7 @@ var (
 	batchDelay       int
 )
 
-var batchCmd = &cobra.Command{
+var BatchCmd = &cobra.Command{
 	Use:   "batch [test-names...]",
 	Short: "Executa múltiplos casos de teste em lote",
 	Long: `Executa múltiplos casos de teste em lote com controle de concorrência.
@@ -27,10 +30,10 @@ Exemplos:
   rabbix batch --all  # executa todos os testes disponíveis`,
 	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		// Sincroniza cache antes de fornecer sugestões
-		syncCacheWithFileSystem()
+		cache.SyncCacheWithFileSystem()
 
 		// Obtém lista de testes do cache
-		cachedTests := getCachedTests()
+		cachedTests := cache.GetCachedTests()
 
 		// Filtra testes que já foram especificados
 		var suggestions []string
@@ -50,7 +53,7 @@ Exemplos:
 		return suggestions, cobra.ShellCompDirectiveNoFileComp
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		settings := loadSettings()
+		settings := sett.LoadSettings()
 		outputDir := settings["output_dir"]
 		if outputDir == "" {
 			home, _ := os.UserHomeDir()
@@ -87,7 +90,7 @@ Exemplos:
 		fmt.Println("─────────────────────────────────────")
 
 		// Carrega todos os casos de teste
-		var testCases []TestCase
+		var testCases []request.TestCase
 		for _, testName := range testNames {
 			testPath := filepath.Join(outputDir, testName+".json")
 			data, err := os.ReadFile(testPath)
@@ -96,7 +99,7 @@ Exemplos:
 				continue
 			}
 
-			var tc TestCase
+			var tc request.TestCase
 			if err := json.Unmarshal(data, &tc); err != nil {
 				fmt.Printf("⚠️  Pulando teste '%s': erro no JSON: %v\n", testName, err)
 				continue
@@ -150,7 +153,7 @@ type BatchResult struct {
 	Response string
 }
 
-func executeBatch(testCases []TestCase, concurrency int, delay time.Duration) []BatchResult {
+func executeBatch(testCases []request.TestCase, concurrency int, delay time.Duration) []BatchResult {
 	var results []BatchResult
 	var mutex sync.Mutex
 	var wg sync.WaitGroup
@@ -162,7 +165,7 @@ func executeBatch(testCases []TestCase, concurrency int, delay time.Duration) []
 
 	for i, tc := range testCases {
 		wg.Add(1)
-		go func(index int, testCase TestCase) {
+		go func(index int, testCase request.TestCase) {
 			defer wg.Done()
 
 			// Adquire semáforo para controlar concorrência
@@ -183,7 +186,7 @@ func executeBatch(testCases []TestCase, concurrency int, delay time.Duration) []
 
 			fmt.Printf("🔄 [%d/%d] Executando: %s\n", index+1, len(testCases), testCase.Name)
 
-			resp, err := PublishMessage(testCase)
+			resp, err := request.PublishMessage(testCase)
 			result.Duration = time.Since(testStart)
 
 			if err != nil {
@@ -240,13 +243,12 @@ func calculateTotalTime(results []BatchResult) time.Duration {
 }
 
 func init() {
-	rootCmd.AddCommand(batchCmd)
 
 	// Flags para controlar a execução em lote
-	batchCmd.Flags().IntVarP(&batchConcurrency, "concurrency", "c", 3,
+	BatchCmd.Flags().IntVarP(&batchConcurrency, "concurrency", "c", 3,
 		"Número máximo de testes executados simultaneamente")
-	batchCmd.Flags().IntVarP(&batchDelay, "delay", "d", 500,
+	BatchCmd.Flags().IntVarP(&batchDelay, "delay", "d", 500,
 		"Delay em milissegundos entre execuções (0 = sem delay)")
-	batchCmd.Flags().BoolP("all", "a", false,
+	BatchCmd.Flags().BoolP("all", "a", false,
 		"Executa todos os testes disponíveis")
 }

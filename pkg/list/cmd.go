@@ -1,4 +1,4 @@
-package cmd
+package list
 
 import (
 	"encoding/json"
@@ -6,14 +6,15 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/maxwelbm/rabbix/pkg/sett"
 	"github.com/spf13/cobra"
 )
 
-var listCmd = &cobra.Command{
+var ListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "Lista todos os casos de teste salvos",
-	Run: func(cmd *cobra.Command, args []string) {
-		settings := loadSettings()
+	Run: func(_ *cobra.Command, args []string) {
+		settings := sett.LoadSettings()
 		outputDir := settings["output_dir"]
 		if outputDir == "" {
 			home, _ := os.UserHomeDir()
@@ -26,7 +27,7 @@ var listCmd = &cobra.Command{
 			return
 		}
 
-		fmt.Println("📄 Casos de teste salvos:")
+		fmt.Println("Casos de teste:")
 
 		for _, file := range files {
 			if filepath.Ext(file.Name()) == ".json" {
@@ -36,19 +37,15 @@ var listCmd = &cobra.Command{
 					continue
 				}
 
-				var test map[string]interface{}
+				var test map[string]any
 				if err := json.Unmarshal(data, &test); err != nil {
 					continue
 				}
 
 				name := test["name"]
 				rk := test["route_key"]
-				fmt.Printf("🧪 %s  (routeKey: %s)\n", name, rk)
+				fmt.Printf(" %s  (routeKey: %s)\n", name, rk)
 			}
 		}
 	},
-}
-
-func init() {
-	rootCmd.AddCommand(listCmd)
 }

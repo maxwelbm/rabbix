@@ -1,4 +1,4 @@
-package cmd
+package run
 
 import (
 	"encoding/json"
@@ -7,10 +7,13 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/maxwelbm/rabbix/pkg/cache"
+	"github.com/maxwelbm/rabbix/pkg/request"
+	"github.com/maxwelbm/rabbix/pkg/sett"
 	"github.com/spf13/cobra"
 )
 
-var runCmd = &cobra.Command{
+var RunCmd = &cobra.Command{
 	Use:   "run [test-name]",
 	Short: "Executa um caso de teste específico",
 	Long: `Executa um caso de teste específico salvamento previamente.
@@ -18,10 +21,10 @@ Exemplo: rabbix run meu-teste`,
 	Args: cobra.ExactArgs(1),
 	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		// Sincroniza cache antes de fornecer sugestões
-		syncCacheWithFileSystem()
+		cache.SyncCacheWithFileSystem()
 
 		// Obtém lista de testes do cache
-		cachedTests := getCachedTests()
+		cachedTests := cache.GetCachedTests()
 
 		return cachedTests, cobra.ShellCompDirectiveNoFileComp
 	},
@@ -29,7 +32,7 @@ Exemplo: rabbix run meu-teste`,
 		testName := args[0]
 
 		// Carrega configuração para obter diretório de saída
-		settings := loadSettings()
+		settings := sett.LoadSettings()
 		outputDir := settings["output_dir"]
 		if outputDir == "" {
 			home, _ := os.UserHomeDir()
@@ -45,7 +48,7 @@ Exemplo: rabbix run meu-teste`,
 			return
 		}
 
-		var tc TestCase
+		var tc request.TestCase
 		if err := json.Unmarshal(data, &tc); err != nil {
 			fmt.Printf("❌ Erro ao carregar JSON do teste '%s': %v\n", testName, err)
 			return
@@ -55,7 +58,7 @@ Exemplo: rabbix run meu-teste`,
 		fmt.Printf("📤 Route Key: %s\n", tc.RouteKey)
 
 		// Usa a função reutilizável PublishMessage
-		resp, err := PublishMessage(tc)
+		resp, err := request.PublishMessage(tc)
 		if err != nil {
 			fmt.Printf("❌ Erro ao enviar mensagem: %v\n", err)
 			return
@@ -82,8 +85,4 @@ Exemplo: rabbix run meu-teste`,
 
 		fmt.Printf("📥 Resposta do RabbitMQ:\n%s\n", string(body))
 	},
-}
-
-func init() {
-	rootCmd.AddCommand(runCmd)
 }
