@@ -8,42 +8,15 @@ More than a tool, this has become a serious project - made by a developer, for d
 
 ## ⚙️ Install
 
-Você pode instalar diretamente com:
+You can install directly with go:
+> requests Go 1.23 ou superior instalado.
 
 ```bash
 go install github.com/maxwelbm/rabbix@latest
 ```
 
-> Requer Go 1.18 ou superior instalado.
+[Setup Autocomplete](AUTOCOMPLETE.md)
 
-## 📁 Configuração
-
-Use o comando `rabbix config` para definir o host RabbitMQ e o diretório onde os testes serão salvos:
-
-```bash
-# Define o host base
-rabbix config set --host http://localhost:15672
-
-# Define o diretório onde os testes serão salvos
-rabbix config set --output ./vaca
-```
-
-Você pode verificar as configurações atuais com:
-
-```bash
-rabbix config get
-```
-
-## 💡 Comandos disponíveis
-
-```bash
-rabbix add --file exemplo.json --routeKey minha.fila --name teste_simples
-rabbix list
-rabbix ui
-```
-
-## 🔄 [Setup Autocomplete](README_AUTOCOMPLETE.md)
-
-## 🪪 Licença
+## License
 
 [MIT](LICENSE) License © Maxwel Mazur
