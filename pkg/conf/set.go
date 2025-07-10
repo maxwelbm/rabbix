@@ -16,7 +16,6 @@ func (c *Conf) CmdSet() *cobra.Command {
 
 			if host != "" {
 				settings["host"] = host
-				settings["rapt_url"] = host + "/api/exchanges/%2f/amq.default/publish"
 			}
 
 			if outputDir != "" {
@@ -32,7 +31,7 @@ func (c *Conf) CmdSet() *cobra.Command {
 			}
 
 			c.settings.SaveSettings(settings)
-			fmt.Println("Configuração atualizada com sucesso.")
+			fmt.Println("✅ Configuração atualizada com sucesso.")
 		},
 	}
 	cmd.Flags().StringVar(&host, "host", "", "Host base do RabbitMQ (ex: http://localhost:15672)")

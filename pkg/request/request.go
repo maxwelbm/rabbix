@@ -39,16 +39,6 @@ func (r *Request) Request(testCase rabbix.TestCase) (*http.Response, error) {
 		host = settings["host"]
 	}
 
-	clientKey := "6b3c9fac-46e7-43ea-ad71-0641ee51e53d"
-	if settings["client"] != "" {
-		clientKey = settings["client"]
-	}
-
-	zone := "issuer"
-	if settings["zone"] != "" {
-		zone = settings["zone"]
-	}
-
 	payloadBytes, err := json.Marshal(testCase.JSONPool)
 	if err != nil {
 		return nil, fmt.Errorf("erro ao serializar payload: %w", err)
@@ -73,11 +63,14 @@ func (r *Request) Request(testCase rabbix.TestCase) (*http.Response, error) {
 		return nil, fmt.Errorf("erro ao criar requisição HTTP: %w", err)
 	}
 
-	// Configura headers
+	if auth != "" {
+		req.Header.Set("Authorization", auth)
+	}
+
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", auth)
-	req.Header.Set("x-ds-client-key", clientKey)
-	req.Header.Set("x-ds-zone", zone)
+	for key, value := range testCase.Headers {
+		req.Header.Set(key, value)
+	}
 
 	clientHttp := &http.Client{}
 	return clientHttp.Do(req)

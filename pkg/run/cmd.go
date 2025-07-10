@@ -40,10 +40,8 @@ func (r *Run) CmdRun() *cobra.Command {
 Exemplo: rabbix run meu-teste`,
 		Args: cobra.ExactArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			// Sincroniza cache antes de fornecer sugestões
 			r.Cache.SyncCacheWithFileSystem()
 
-			// Obtém lista de testes do cache
 			cachedTests := r.Cache.GetCachedTests()
 
 			return cachedTests, cobra.ShellCompDirectiveNoFileComp
@@ -51,7 +49,6 @@ Exemplo: rabbix run meu-teste`,
 		Run: func(cmd *cobra.Command, args []string) {
 			testName := args[0]
 
-			// Carrega configuração para obter diretório de saída
 			settings := r.settings.LoadSettings()
 			outputDir := settings["output_dir"]
 			if outputDir == "" {
@@ -59,7 +56,6 @@ Exemplo: rabbix run meu-teste`,
 				outputDir = filepath.Join(home, ".rabbix", "tests")
 			}
 
-			// Lê o arquivo do teste
 			testPath := filepath.Join(outputDir, testName+".json")
 			data, err := os.ReadFile(testPath)
 			if err != nil {
@@ -77,7 +73,6 @@ Exemplo: rabbix run meu-teste`,
 			fmt.Printf("🚀 Executando teste: %s\n", tc.Name)
 			fmt.Printf("📤 Route Key: %s\n", tc.RouteKey)
 
-			// Usa a função reutilizável PublishMessage
 			resp, err := r.request.Request(tc)
 			if err != nil {
 				fmt.Printf("❌ Erro ao enviar mensagem: %v\n", err)
@@ -89,14 +84,12 @@ Exemplo: rabbix run meu-teste`,
 				}
 			}()
 
-			// Lê a resposta
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				fmt.Printf("❌ Erro ao ler resposta: %v\n", err)
 				return
 			}
 
-			// Exibe o resultado
 			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 				fmt.Printf("✅ Mensagem enviada com sucesso! (Status: %d)\n", resp.StatusCode)
 			} else {

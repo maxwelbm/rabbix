@@ -49,10 +49,8 @@ Exemplos:
   rabbix batch --concurrency 5 --delay 1000 teste1 teste2
   rabbix batch --all  # executa todos os testes disponíveis`,
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			// Sincroniza cache antes de fornecer sugestões
 			b.Cache.SyncCacheWithFileSystem()
 
-			// Obtém lista de testes do cache
 			cachedTests := b.Cache.GetCachedTests()
 
 			// Filtra testes que já foram especificados
@@ -164,7 +162,6 @@ Exemplos:
 		},
 	}
 
-	// Flags para controlar a execução em lote
 	cmd.Flags().IntVarP(&batchConcurrency, "concurrency", "c", 3,
 		"Número máximo de testes executados simultaneamente")
 	cmd.Flags().IntVarP(&batchDelay, "delay", "d", 500,

@@ -40,36 +40,6 @@ func saveCache(cache *CacheStr) error {
 	return os.WriteFile(path, data, 0644)
 }
 
-func addToCache(name, routeKey string) {
-	cache := loadCache()
-
-	// Verifica se já existe
-	for i, entry := range cache.Tests {
-		if entry.Name == name {
-			// Atualiza entrada existente
-			cache.Tests[i].RouteKey = routeKey
-			cache.Tests[i].UpdatedAt = time.Now()
-			if err := saveCache(cache); err != nil {
-				fmt.Printf("Erro ao salvar cache: %v\n", err)
-			}
-			return
-		}
-	}
-
-	// Adiciona nova entrada
-	entry := CacheEntry{
-		Name:      name,
-		RouteKey:  routeKey,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
-
-	cache.Tests = append(cache.Tests, entry)
-	if err := saveCache(cache); err != nil {
-		fmt.Printf("Erro ao salvar cache: %v\n", err)
-	}
-}
-
 func (c *Cache) GetCachedTests() []string {
 	cache := loadCache()
 	var tests []string
@@ -139,18 +109,5 @@ func (c *Cache) SyncCacheWithFileSystem() {
 	cache.Tests = newTests
 	if err := saveCache(cache); err != nil {
 		fmt.Printf("❌ Erro ao salvar cache: %v\n", err)
-	}
-}
-
-func clearCache() {
-	cache := &CacheStr{
-		Tests:   []CacheEntry{},
-		Version: "1.0",
-	}
-
-	if err := saveCache(cache); err != nil {
-		fmt.Printf("❌ Erro ao limpar cache: %v\n", err)
-	} else {
-		fmt.Println("✅ Cache limpo com sucesso")
 	}
 }

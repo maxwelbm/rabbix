@@ -28,7 +28,7 @@ func CmdList(settings sett.SettItf) *cobra.Command {
 				return
 			}
 
-			fmt.Println("Casos de teste:")
+			fmt.Println("📄 Casos de teste:")
 
 			for _, file := range files {
 				if filepath.Ext(file.Name()) == ".json" {
@@ -45,7 +45,7 @@ func CmdList(settings sett.SettItf) *cobra.Command {
 
 					name := test["name"]
 					rk := test["route_key"]
-					fmt.Printf(" %s  (routeKey: %s)\n", name, rk)
+					fmt.Printf("🧪 %s  (routeKey: %s)\n", name, rk)
 				}
 			}
 		},
