@@ -1,4 +1,4 @@
-package cmd
+package cache
 
 import (
 	"encoding/json"
@@ -9,26 +9,14 @@ import (
 	"time"
 )
 
-type CacheEntry struct {
-	Name      string    `json:"name"`
-	RouteKey  string    `json:"route_key"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-}
-
-type Cache struct {
-	Tests   []CacheEntry `json:"tests"`
-	Version string       `json:"version"`
-}
-
 func getCachePath() string {
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".rabbix", "cache.json")
 }
 
-func loadCache() *Cache {
+func loadCache() *CacheStr {
 	path := getCachePath()
-	cache := &Cache{
+	cache := &CacheStr{
 		Tests:   []CacheEntry{},
 		Version: "1.0",
 	}
@@ -40,7 +28,7 @@ func loadCache() *Cache {
 	return cache
 }
 
-func saveCache(cache *Cache) error {
+func saveCache(cache *CacheStr) error {
 	path := getCachePath()
 	_ = os.MkdirAll(filepath.Dir(path), os.ModePerm)
 
@@ -52,52 +40,7 @@ func saveCache(cache *Cache) error {
 	return os.WriteFile(path, data, 0644)
 }
 
-func addToCache(name, routeKey string) {
-	cache := loadCache()
-
-	// Verifica se já existe
-	for i, entry := range cache.Tests {
-		if entry.Name == name {
-			// Atualiza entrada existente
-			cache.Tests[i].RouteKey = routeKey
-			cache.Tests[i].UpdatedAt = time.Now()
-			if err := saveCache(cache); err != nil {
-				fmt.Printf("Erro ao salvar cache: %v\n", err)
-			}
-			return
-		}
-	}
-
-	// Adiciona nova entrada
-	entry := CacheEntry{
-		Name:      name,
-		RouteKey:  routeKey,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
-
-	cache.Tests = append(cache.Tests, entry)
-	if err := saveCache(cache); err != nil {
-		fmt.Printf("Erro ao salvar cache: %v\n", err)
-	}
-}
-
-// func removeFromCache(name string) {
-// 	cache := loadCache()
-
-// 	for i, entry := range cache.Tests {
-// 		if entry.Name == name {
-// 			// Remove entrada
-// 			cache.Tests = append(cache.Tests[:i], cache.Tests[i+1:]...)
-// 			if err := saveCache(cache); err != nil {
-// 				fmt.Printf("Erro ao salvar cache: %v\n", err)
-// 			}
-// 			return
-// 		}
-// 	}
-// }
-
-func getCachedTests() []string {
+func (c *Cache) GetCachedTests() []string {
 	cache := loadCache()
 	var tests []string
 
@@ -108,13 +51,8 @@ func getCachedTests() []string {
 	return tests
 }
 
-// func getCachedTestsWithRouteKey() []CacheEntry {
-// 	cache := loadCache()
-// 	return cache.Tests
-// }
-
-func syncCacheWithFileSystem() {
-	settings := loadSettings()
+func (c *Cache) SyncCacheWithFileSystem() {
+	settings := c.settings.LoadSettings()
 	outputDir := settings["output_dir"]
 	if outputDir == "" {
 		home, _ := os.UserHomeDir()
@@ -171,32 +109,5 @@ func syncCacheWithFileSystem() {
 	cache.Tests = newTests
 	if err := saveCache(cache); err != nil {
 		fmt.Printf("❌ Erro ao salvar cache: %v\n", err)
-	}
-}
-
-func printCacheStats() {
-	cache := loadCache()
-	fmt.Printf("📊 Cache Statistics:\n")
-	fmt.Printf("   Total tests: %d\n", len(cache.Tests))
-	fmt.Printf("   Cache version: %s\n", cache.Version)
-
-	if len(cache.Tests) > 0 {
-		fmt.Printf("   Tests available for autocomplete:\n")
-		for _, entry := range cache.Tests {
-			fmt.Printf("     • %s (route: %s)\n", entry.Name, entry.RouteKey)
-		}
-	}
-}
-
-func clearCache() {
-	cache := &Cache{
-		Tests:   []CacheEntry{},
-		Version: "1.0",
-	}
-
-	if err := saveCache(cache); err != nil {
-		fmt.Printf("❌ Erro ao limpar cache: %v\n", err)
-	} else {
-		fmt.Println("✅ Cache limpo com sucesso")
 	}
 }

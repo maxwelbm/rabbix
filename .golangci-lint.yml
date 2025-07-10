@@ -5,7 +5,6 @@ run:
   skip-dirs:
     - .zed
     - .git
-    - node_modules
     - vendor
 
 linters:

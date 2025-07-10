@@ -1,76 +1,22 @@
 # 🐇 rabbix
 
-**rabbix** é uma CLI para facilitar os testes de micro-serviços que utilizam RabbitMQ, tornando o processo de criação, execução e documentação de mensagens mais simples e padronizado.
+This project was born out of a real need during development: to test various services, RabbitMQ queues with different payloads, in a quick and organized way. At first, this was a manual, repetitive and error-prone process - I would lose payloads, restart pages and spend a lot of time on simple tasks.
 
-## 🎯 Objetivo
+To solve this, I started with a simple script to publish messages to RabbitMQ. That script evolved into a lean CLI, which initially focused only on queues, and now I'm expanding it to allow multiple executions. The focus is to offer a tool that helps developers test manual flows in an organized, reusable and efficient way during development time.
 
-- Permitir o envio de mensagens RabbitMQ diretamente pela linha de comando.
-- Salvar e reutilizar casos de teste com JSON dinâmico.
-- Substituir o uso do Postman com uma interface mais simples e rápida.
-- Facilitar a documentação e reexecução de mensagens usadas em ambientes de integração.
+Made by a developer for developers. I'm building it with attention, care and a focus on productivity. It's something that has helped me a lot on a daily basis and I believe it can help other people too.
 
-## 📁 Estrutura do Projeto
+## ⚙️ Install
 
-```
-rabbix/
-├── main.go                 # Ponto de entrada da aplicação
-├── pkg/cmd/               # Comandos da CLI
-│   ├── root.go           # Comando raiz
-│   ├── add.go            # Adicionar testes
-│   ├── list.go           # Listar testes
-│   ├── run.go            # Executar teste individual
-│   ├── batch.go          # Executar testes em lote
-│   ├── config.go         # Configurações
-│   └── ui.go             # Interface web avançada
-└── web/                  # Assets da interface web
-    ├── embed.go          # Sistema de embed
-    ├── templates/        # Templates HTML
-    │   └── index.html    # Interface principal
-    └── static/           # Arquivos estáticos
-        ├── css/
-        │   └── style.css # Estilos da interface
-        └── js/
-            └── script.js # JavaScript da interface
-```
-
-## ⚙️ Instalação
-
-Você pode instalar diretamente com:
+You can install directly with go:
+> requests Go 1.23 ou superior instalado.
 
 ```bash
 go install github.com/maxwelbm/rabbix@latest
 ```
 
-> Requer Go 1.18 ou superior instalado.
+[Setup Autocomplete](AUTOCOMPLETE.md)
 
-## 📁 Configuração
-
-Use o comando `rabbix config` para definir o host RabbitMQ e o diretório onde os testes serão salvos:
-
-```bash
-# Define o host base
-rabbix config set --host http://localhost:15672
-
-# Define o diretório onde os testes serão salvos
-rabbix config set --output ./vaca
-```
-
-Você pode verificar as configurações atuais com:
-
-```bash
-rabbix config get
-```
-
-## 💡 Comandos disponíveis
-
-```bash
-rabbix add --file exemplo.json --routeKey minha.fila --name teste_simples
-rabbix list
-rabbix ui
-```
-
-## 🔄 [Setup Autocomplete](README_AUTOCOMPLETE.md)
-
-## 🪪 Licença
+## License
 
 [MIT](LICENSE) License © Maxwel Mazur
