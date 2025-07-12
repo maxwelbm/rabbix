@@ -18,33 +18,32 @@ func CmdHealth(settings sett.SettItf) *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			settings := settings.LoadSettings()
 
-			var auth = "Basic Z3Vlc3Q6Z3Vlc3Q="
-			if settings["auth"] != "" {
-				auth = "Basic " + settings["auth"]
+			var auth = settings["auth"]
+			if auth == "" {
+				fmt.Printf("necessario configurar user e password com o comando 'rabbix conf set --user <user> --password <password>'\n")
+				return
 			}
 
-			var host = "http://localhost:15672"
+			auth = "Basic " + auth
+
+			var host = "http://localhost:15672" // host default
 			if settings["host"] != "" {
 				host = settings["host"]
 			}
 
-			// Monta a URL do endpoint de overview
 			url := strings.TrimRight(host, "/") + "/api/overview"
 
 			fmt.Printf("🔍 Verificando saúde da API...\n")
 			fmt.Printf("📡 URL: %s\n", url)
 
-			// Cria a requisição
 			req, err := http.NewRequest("GET", url, nil)
 			if err != nil {
 				fmt.Printf("❌ Erro ao criar requisição: %v\n", err)
 				return
 			}
 
-			// Adiciona o header Authorization
 			req.Header.Add("Authorization", auth)
 
-			// Faz a requisição
 			client := &http.Client{}
 			resp, err := client.Do(req)
 			if err != nil {
@@ -57,14 +56,12 @@ func CmdHealth(settings sett.SettItf) *cobra.Command {
 				}
 			}()
 
-			// Lê a resposta
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				fmt.Printf("❌ Erro ao ler resposta: %v\n", err)
 				return
 			}
 
-			// Exibe resultado
 			fmt.Printf("📊 Status: %s\n", resp.Status)
 
 			if resp.StatusCode >= 200 && resp.StatusCode < 300 {

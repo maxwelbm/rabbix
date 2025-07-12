@@ -29,12 +29,15 @@ func New(settings sett.SettItf) RequestItf {
 func (r *Request) Request(testCase rabbix.TestCase) (*http.Response, error) {
 	settings := r.settings.LoadSettings()
 
-	var auth = "Basic Z3Vlc3Q6Z3Vlc3Q="
-	if settings["auth"] != "" {
-		auth = "Basic " + settings["auth"]
+	var auth = settings["auth"]
+	if auth == "" {
+		fmt.Printf("necessario configurar user e password com o comando 'rabbix conf set --user <user> --password <password>'\n")
+		return nil, fmt.Errorf("autenticação não configurada")
 	}
 
-	var host = "http://localhost:15672"
+	auth = "Basic " + auth
+
+	var host = "http://localhost:15672" // host default
 	if settings["host"] != "" {
 		host = settings["host"]
 	}

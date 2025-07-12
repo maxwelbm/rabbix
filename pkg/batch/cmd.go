@@ -122,6 +122,11 @@ Exemplos:
 					fmt.Printf("⚠️  Pulando teste '%s': erro no JSON: %v\n", testName, err)
 					continue
 				}
+
+				if tc.Name == "" {
+					tc.Name = testName
+				}
+
 				testCases = append(testCases, tc)
 			}
 

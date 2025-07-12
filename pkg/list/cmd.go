@@ -43,9 +43,9 @@ func CmdList(settings sett.SettItf) *cobra.Command {
 						continue
 					}
 
-					name := test["name"]
-					rk := test["route_key"]
-					fmt.Printf("🧪 %s  (routeKey: %s)\n", name, rk)
+					fmt.Printf("🧪 %s  (routeKey: %s)\n",
+						file.Name(),
+						test["route_key"])
 				}
 			}
 		},
