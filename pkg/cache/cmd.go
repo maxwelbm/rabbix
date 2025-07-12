@@ -34,7 +34,7 @@ func (c *Cache) CmdCache() *cobra.Command {
 
 	cmd.AddCommand(c.cmdStats())
 	cmd.AddCommand(c.cmdClear())
-	cmd.AddCommand(c.cmdClear())
+	cmd.AddCommand(c.cmdSync())
 
 	return cmd
 }
