@@ -47,13 +47,8 @@ func (r *Request) Request(testCase rabbix.TestCase) (*http.Response, error) {
 		return nil, fmt.Errorf("erro ao serializar payload: %w", err)
 	}
 
-	properties := map[string]any{}
-	if len(testCase.Headers) > 0 {
-		properties["headers"] = testCase.Headers
-	}
-
 	requestBody := map[string]any{
-		"properties":       properties,
+		"properties":       map[string]any{},
 		"routing_key":      testCase.RouteKey,
 		"payload":          string(payloadBytes),
 		"payload_encoding": "string",
@@ -76,6 +71,9 @@ func (r *Request) Request(testCase rabbix.TestCase) (*http.Response, error) {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+	for key, value := range testCase.Headers {
+		req.Header.Set(key, value)
+	}
 
 	clientHttp := &http.Client{}
 	return clientHttp.Do(req)
