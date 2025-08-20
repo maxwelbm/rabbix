@@ -4,8 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/maxwelbm/rabbix/pkg/cache"
 	"github.com/maxwelbm/rabbix/pkg/rabbix"
@@ -33,6 +36,9 @@ func New(
 }
 
 func (r *Run) CmdRun() *cobra.Command {
+	var quantity int
+	var mockSpec string
+
 	var cmd = &cobra.Command{
 		Use:   "run [test-name]",
 		Short: "Executa um caso de teste específico",
@@ -40,8 +46,10 @@ func (r *Run) CmdRun() *cobra.Command {
 Exemplo: rabbix run meu-teste`,
 		Args: cobra.ExactArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			// Sincroniza cache antes de fornecer sugestões
 			r.Cache.SyncCacheWithFileSystem()
 
+			// Obtém lista de testes do cache
 			cachedTests := r.Cache.GetCachedTests()
 
 			return cachedTests, cobra.ShellCompDirectiveNoFileComp
@@ -49,6 +57,7 @@ Exemplo: rabbix run meu-teste`,
 		Run: func(cmd *cobra.Command, args []string) {
 			testName := args[0]
 
+			// Carrega configuração para obter diretório de saída
 			settings := r.settings.LoadSettings()
 			outputDir := settings["output_dir"]
 			if outputDir == "" {
@@ -56,6 +65,7 @@ Exemplo: rabbix run meu-teste`,
 				outputDir = filepath.Join(home, ".rabbix", "tests")
 			}
 
+			// Lê o arquivo do teste
 			testPath := filepath.Join(outputDir, testName+".json")
 			data, err := os.ReadFile(testPath)
 			if err != nil {
@@ -70,35 +80,132 @@ Exemplo: rabbix run meu-teste`,
 				return
 			}
 
+			// Garante que JSONPool exista
+			if tc.JSONPool == nil {
+				tc.JSONPool = map[string]any{}
+			}
+
+			// Parser do mockSpec -> []string de "campo:tipo"
+			var mockPairs []string
+			if strings.TrimSpace(mockSpec) != "" {
+				// permite JSON array ou lista separada por vírgula
+				trim := strings.TrimSpace(mockSpec)
+				if strings.HasPrefix(trim, "[") {
+					if err := json.Unmarshal([]byte(trim), &mockPairs); err != nil {
+						fmt.Printf("⚠️  Não foi possível interpretar --mock como JSON array: %v\n", err)
+						// tenta fallback por vírgulas removendo colchetes
+						trim = strings.Trim(trim, "[]")
+						if trim != "" {
+							mockPairs = strings.Split(trim, ",")
+						}
+					}
+				} else {
+					mockPairs = strings.Split(trim, ",")
+				}
+				// limpeza de espaços e aspas
+				for i := range mockPairs {
+					mockPairs[i] = strings.Trim(mockPairs[i], " \"\n\t")
+				}
+			}
+
+			if quantity <= 0 {
+				quantity = 1
+			}
+
 			fmt.Printf("🚀 Executando teste: %s\n", tc.Name)
 			fmt.Printf("📤 Route Key: %s\n", tc.RouteKey)
 
-			resp, err := r.request.Request(tc)
-			if err != nil {
-				fmt.Printf("❌ Erro ao enviar mensagem: %v\n", err)
-				return
+			if quantity > 1 {
+				fmt.Printf("🔁 Quantidade: %d\n", quantity)
 			}
-			defer func() {
-				if err := resp.Body.Close(); err != nil {
-					fmt.Printf("❌ Erro ao fechar corpo da resposta: %v\n", err)
+			if len(mockPairs) > 0 {
+				fmt.Printf("🧪 Mock: %v\n", mockPairs)
+			}
+
+			for i := 1; i <= quantity; i++ {
+				// aplica mocks por iteração
+				if len(mockPairs) > 0 {
+					seed := time.Now().UnixNano() + int64(i)
+					rand.Seed(seed)
+					for _, pair := range mockPairs {
+						if pair == "" {
+							continue
+						}
+						parts := strings.SplitN(pair, ":", 2)
+						if len(parts) != 2 {
+							fmt.Printf("⚠️  Par inválido em --mock: '%s' (esperado 'campo:tipo')\n", pair)
+							continue
+						}
+						field := strings.TrimSpace(parts[0])
+						typeName := strings.ToLower(strings.TrimSpace(parts[1]))
+						var value any
+						switch typeName {
+						case "int":
+							value = rand.Intn(1000000)
+						case "float", "float64":
+							value = rand.Float64() * 100000
+						case "string":
+							value = randomString(12)
+						case "time", "datetime", "date":
+							value = time.Now().Format(time.RFC3339)
+						case "bool", "boolean":
+							value = rand.Intn(2) == 0
+						default:
+							fmt.Printf("⚠️  Tipo desconhecido '%s' para campo '%s'. Usando string.\n", typeName, field)
+							value = randomString(8)
+						}
+						// aplica no JSONPool
+						tc.JSONPool[field] = value
+					}
 				}
-			}()
 
-			body, err := io.ReadAll(resp.Body)
-			if err != nil {
-				fmt.Printf("❌ Erro ao ler resposta: %v\n", err)
-				return
+				// Usa a função reutilizável PublishMessage
+				resp, err := r.request.Request(tc)
+				if err != nil {
+					fmt.Printf("❌ [%d/%d] Erro ao enviar mensagem: %v\n", i, quantity, err)
+					continue
+				}
+
+				func() {
+					defer func() {
+						if err := resp.Body.Close(); err != nil {
+							fmt.Printf("❌ Erro ao fechar corpo da resposta: %v\n", err)
+						}
+					}()
+
+					// Lê a resposta
+					body, err := io.ReadAll(resp.Body)
+					if err != nil {
+						fmt.Printf("❌ [%d/%d] Erro ao ler resposta: %v\n", i, quantity, err)
+						return
+					}
+
+					// Exibe o resultado
+					if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+						fmt.Printf("✅ [%d/%d] Mensagem enviada com sucesso! (Status: %d)\n", i, quantity, resp.StatusCode)
+					} else {
+						fmt.Printf("⚠️  [%d/%d] Resposta com status %d\n", i, quantity, resp.StatusCode)
+					}
+
+					fmt.Printf("📥 [%d/%d] Resposta do RabbitMQ:\n%s\n", i, quantity, string(body))
+				}()
 			}
-
-			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-				fmt.Printf("✅ Mensagem enviada com sucesso! (Status: %d)\n", resp.StatusCode)
-			} else {
-				fmt.Printf("⚠️  Resposta com status %d\n", resp.StatusCode)
-			}
-
-			fmt.Printf("📥 Resposta do RabbitMQ:\n%s\n", string(body))
 		},
 	}
 
+	// Flags
+	cmd.Flags().IntVarP(&quantity, "quantity", "n", 1, "Quantidade de vezes que o caso de teste será executado")
+	cmd.Flags().StringVar(&mockSpec, "mock", "", "Array JSON ou lista separada por vírgulas de pares 'campo:tipo' para gerar dados dinâmicos")
+
 	return cmd
+}
+
+// randomString gera uma string aleatória alfanumérica
+func randomString(n int) string {
+	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
 }
