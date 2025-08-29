@@ -2,9 +2,9 @@
 
 ### 🐚 Bash
 
-Para habilitar o autocomplete no Bash, você precisa ter o pacote `bash-completion` instalado:
+To enable autocomplete in Bash, you need to have the `bash-completion` package installed:
 
-#### 📦 Instale o bash-completion
+#### 📦 Install bash-completion
 
 - **Ubuntu/Debian**:
   ```bash
@@ -16,22 +16,22 @@ Para habilitar o autocomplete no Bash, você precisa ter o pacote `bash-completi
   sudo pacman -S bash-completion
   ```
 
-#### ⚙️ Configure o autocomplete
+#### Configure the autocomplete
 
-Gere o script e salve no seu diretório pessoal:
+Get the script and save it in your personal directory:
 
 ```bash
 mkdir -p ~/.rabbix
 rabbix completion bash > ~/.rabbix/rabbix.bash
 ```
 
-Adicione ao seu `~/.bashrc`:
+Add to your `~/.bashrc`:
 
 ```bash
 echo 'source ~/.rabbix/rabbix.bash' >> ~/.bashrc
 ```
 
-Reinicie o terminal ou rode:
+Restart the terminal or run:
 
 ```bash
 source ~/.bashrc
@@ -41,73 +41,19 @@ source ~/.bashrc
 
 ### 🧞 Zsh
 
-No Zsh, o autocomplete é mais direto e não requer dependências extras.
+In Zsh, autocomplete is more straightforward and doesn't require extra dependencies.
 
-#### ⚙️ Configure o autocomplete
+#### Configure the autocomplete
 
-Adicione essa linha ao final do seu `~/.zshrc`:
+Add this line to the end of your `~/.zshrc`:
 
 ```zsh
 autoload -U compinit; compinit
 source <(rabbix completion zsh); compdef _rabbix rabbix
 ```
 
-Reinicie o terminal ou rode:
+Restart the terminal or run:
 
 ```bash
 source ~/.zshrc
 ```
-
----
-
-### 🧠 Cache Inteligente
-
-O Rabbix agora possui um sistema de cache inteligente que melhora significativamente o autocomplete:
-
-#### ✨ Funcionalidades do Cache
-
-- **Autocomplete Dinâmico**: Os comandos `batch` e `run` agora sugerem automaticamente os testes disponíveis
-- **Sincronização Automática**: O cache é atualizado automaticamente quando você:
-  - Adiciona novos testes com `rabbix add`
-  - Modifica configurações com `rabbix config set`
-- **Performance**: Sugestões rápidas sem precisar escanear o sistema de arquivos a cada vez
-
-#### 🔧 Gerenciamento do Cache
-
-Comandos disponíveis para gerenciar o cache:
-
-```bash
-# Ver estatísticas do cache
-rabbix config cache stats
-
-# Sincronizar manualmente com os arquivos
-rabbix config cache sync
-
-# Limpar o cache completamente
-rabbix config cache clear
-```
-
-#### 🎯 Exemplos de Uso
-
-Após configurar o autocomplete, você pode usar:
-
-```bash
-# Autocomplete para comando batch
-rabbix batch [TAB][TAB]          # Lista todos os testes disponíveis
-rabbix batch teste1 [TAB][TAB]   # Lista testes restantes (excluindo já selecionados)
-
-# Autocomplete para comando run
-rabbix run [TAB][TAB]            # Lista todos os testes disponíveis
-```
-
-#### 🔄 Como Funciona
-
-1. **Adicionar Teste**: Quando você usa `rabbix add`, o teste é automaticamente adicionado ao cache
-2. **Configurar**: Quando você usa `rabbix config set`, o cache é sincronizado com o sistema de arquivos
-3. **Autocomplete**: Os comandos `batch` e `run` consultam o cache para fornecer sugestões instantâneas
-
-O cache é armazenado em `~/.rabbix/cache.json` e contém informações sobre nome, route key e timestamps dos testes.
-
----
-
-Após isso, comandos como `rabbix [TAB][TAB]` devem exibir sugestões corretamente, incluindo sugestões inteligentes para nomes de testes nos comandos `batch` e `run`.
