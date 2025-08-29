@@ -30,6 +30,7 @@ func (c *Conf) CmdConf() *cobra.Command {
 
 	cmd.AddCommand(c.CmdSet())
 	cmd.AddCommand(c.CmdGet())
+	cmd.AddCommand(c.CmdSelect())
 
 	return cmd
 }

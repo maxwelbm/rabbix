@@ -31,7 +31,8 @@ func (r *Request) Request(testCase rabbix.TestCase) (*http.Response, error) {
 
 	var auth = settings["auth"]
 	if auth == "" {
-		fmt.Printf("necessario configurar user e password com o comando 'rabbix conf set --user <user> --password <password>'\n")
+		fmt.Printf("necessario configurar user e password com o comando 'rabbix conf set" + "" +
+			" --user <user> --password <password>'\n")
 		return nil, fmt.Errorf("autenticação não configurada")
 	}
 
@@ -78,5 +79,6 @@ func (r *Request) Request(testCase rabbix.TestCase) (*http.Response, error) {
 	req.Header.Set("Content-Type", "application/json")
 
 	clientHttp := &http.Client{}
+
 	return clientHttp.Do(req)
 }

@@ -36,8 +36,10 @@ func New(
 }
 
 func (r *Run) CmdRun() *cobra.Command {
-	var quantity int
-	var mockSpec string
+	var (
+		quantity int
+		mockSpec string
+	)
 
 	var cmd = &cobra.Command{
 		Use:   "run [test-name]",
@@ -126,7 +128,7 @@ Exemplo: rabbix run meu-teste`,
 				// aplica mocks por iteração
 				if len(mockPairs) > 0 {
 					seed := time.Now().UnixNano() + int64(i)
-					rand.Seed(seed)
+					rng := rand.New(rand.NewSource(seed))
 					for _, pair := range mockPairs {
 						if pair == "" {
 							continue
@@ -141,24 +143,23 @@ Exemplo: rabbix run meu-teste`,
 						var value any
 						switch typeName {
 						case "int":
-							value = rand.Intn(1000000)
+							value = rng.Intn(1000000)
 						case "float", "float64":
-							value = rand.Float64() * 100000
+							value = rng.Float64() * 100000
 						case "string":
-							value = randomString(12)
+							value = randomString(12, rng)
 						case "time", "datetime", "date":
 							value = time.Now().Format(time.RFC3339)
 						case "bool", "boolean":
-							value = rand.Intn(2) == 0
+							value = rng.Intn(2) == 0
 						default:
 							fmt.Printf("⚠️  Tipo desconhecido '%s' para campo '%s'. Usando string.\n", typeName, field)
-							value = randomString(8)
+							value = randomString(8, rng)
 						}
 						// aplica no JSONPool
 						tc.JSONPool[field] = value
 					}
 				}
-
 				// Usa a função reutilizável PublishMessage
 				resp, err := r.request.Request(tc)
 				if err != nil {
@@ -193,19 +194,22 @@ Exemplo: rabbix run meu-teste`,
 		},
 	}
 
-	// Flags
-	cmd.Flags().IntVarP(&quantity, "quantity", "n", 1, "Quantidade de vezes que o caso de teste será executado")
-	cmd.Flags().StringVar(&mockSpec, "mock", "", "Array JSON ou lista separada por vírgulas de pares 'campo:tipo' para gerar dados dinâmicos")
+	cmd.Flags().IntVarP(&quantity, "quantity", "n", 1,
+		"Quantidade de vezes que o caso de teste será executado")
+	cmd.Flags().StringVar(&mockSpec, "mock", "",
+		"Array JSON ou lista separada por vírgulas de pares 'campo:tipo' para gerar dados dinâmicos")
 
 	return cmd
 }
 
-// randomString gera uma string aleatória alfanumérica
-func randomString(n int) string {
+// randomString gera uma ‘string’ aleatória alfanumérica
+func randomString(n int, rng *rand.Rand) string {
 	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+
 	b := make([]rune, n)
 	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
+		b[i] = letters[rng.Intn(len(letters))]
 	}
+
 	return string(b)
 }

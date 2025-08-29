@@ -42,6 +42,7 @@ func saveCache(cache *CacheStr) error {
 
 func (c *Cache) GetCachedTests() []string {
 	cache := loadCache()
+
 	var tests []string
 
 	for _, entry := range cache.Tests {
@@ -53,6 +54,7 @@ func (c *Cache) GetCachedTests() []string {
 
 func (c *Cache) SyncCacheWithFileSystem() {
 	settings := c.settings.LoadSettings()
+
 	outputDir := settings["output_dir"]
 	if outputDir == "" {
 		home, _ := os.UserHomeDir()

@@ -14,13 +14,15 @@ func CmdHealth(settings sett.SettItf) *cobra.Command {
 	return &cobra.Command{
 		Use:   "health",
 		Short: "Verifica o status de saúde da API do RabbitMQ",
-		Long:  `Faz uma requisição para o endpoint /api/overview para verificar se a API do RabbitMQ está funcionando corretamente.`,
+		Long: `Faz uma requisição para o endpoint /api/overview para verificar se a API do "+
+"RabbitMQ está funcionando corretamente.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			settings := settings.LoadSettings()
 
 			var auth = settings["auth"]
 			if auth == "" {
-				fmt.Printf("necessario configurar user e password com o comando 'rabbix conf set --user <user> --password <password>'\n")
+				fmt.Printf("necessario configurar user e password com o comando " +
+					"'rabbix conf set --user <user> --password <password>'\n")
 				return
 			}
 

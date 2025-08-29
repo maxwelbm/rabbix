@@ -188,7 +188,9 @@ type BatchResult struct {
 
 func (b *Batch) executeBatch(testCases []rabbix.TestCase, concurrency int, delay time.Duration) []BatchResult {
 	var results []BatchResult
+
 	var mutex sync.Mutex
+
 	var wg sync.WaitGroup
 
 	// Canal para controlar concorrência
@@ -198,6 +200,7 @@ func (b *Batch) executeBatch(testCases []rabbix.TestCase, concurrency int, delay
 
 	for i, tc := range testCases {
 		wg.Add(1)
+
 		go func(index int, testCase rabbix.TestCase) {
 			defer wg.Done()
 
@@ -255,7 +258,6 @@ func (b *Batch) executeBatch(testCases []rabbix.TestCase, concurrency int, delay
 			mutex.Lock()
 			results = append(results, result)
 			mutex.Unlock()
-
 		}(i, tc)
 	}
 
@@ -269,8 +271,10 @@ func (b *Batch) executeBatch(testCases []rabbix.TestCase, concurrency int, delay
 
 func calculateTotalTime(results []BatchResult) time.Duration {
 	var total time.Duration
+
 	for _, result := range results {
 		total += result.Duration
 	}
+
 	return total
 }
